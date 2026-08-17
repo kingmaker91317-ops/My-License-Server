@@ -29,5 +29,6 @@
     "status": "active",
     "server_message": "Server is running smoothly",
     "maintenance": false
-  }
+  },
+  "admin_password": "khan9131"
 }

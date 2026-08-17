@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - License & Server Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; }
+    .card-header { background-color: #334155; border-bottom: 1px solid #475569; font-weight: 600; }
+    .form-control, .form-select { background-color: #0f172a; border-color: #475569; color: #f8fafc; }
+    .form-control:focus, .form-select:focus { background-color: #0f172a; border-color: #38bdf8; color: #f8fafc; box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25); }
+    .table { color: #f8fafc; }
+    .table-dark { background-color: #1e293b; }
+    .badge-active { background-color: #10b981; }
+    .badge-expired { background-color: #ef4444; }
+    .badge-bound { background-color: #6366f1; }
+    .badge-unbound { background-color: #f59e0b; }
+    .nav-tabs .nav-link { color: #94a3b8; }
+    .nav-tabs .nav-link.active { background-color: #1e293b; border-color: #334155 #334155 #1e293b; color: #38bdf8; font-weight: 600; }
+    .cursor-pointer { cursor: pointer; }
+  </style>
+</head>
+<body class="p-3 p-md-5">
+
+  <div class="container" style="max-width: 1100px;">
+    
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="row justify-content-center" style="margin-top: 100px;">
+      <div class="col-md-5">
+        <div class="card shadow-lg p-4 text-center">
+          <h3 class="mb-3 text-info"><i class="fa-solid fa-shield-halved"></i> License Admin</h3>
+          <p class="text-secondary small">Enter Admin Password to manage keys & endpoints</p>
+          <div class="mb-3">
+            <div class="input-group">
+              <input type="password" id="adminPasswordInput" class="form-control text-center form-control-lg" placeholder="Admin Password (default: admin123)" onkeydown="if(event.key==='Enter') loginAdmin()">
+              <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility()" title="Show/Hide Password" style="border-color: #475569;">
+                <i class="fa-solid fa-eye" id="eyeIcon" style="color: #38bdf8;"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-check text-start mb-3">
+            <input class="form-check-input" type="checkbox" id="rememberPasswordCheck" checked>
+            <label class="form-check-label text-secondary small" for="rememberPasswordCheck">
+              Remember Password (बार-बार न डालना पड़े)
+            </label>
+          </div>
+          <button onclick="loginAdmin()" class="btn btn-info w-100 btn-lg fw-bold"><i class="fa-solid fa-lock-open"></i> Login</button>
+          <div id="loginError" class="text-danger mt-2 small" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN DASHBOARD (Initially Hidden) -->
+    <div id="dashboardScreen" style="display: none;">
+      
+      <!-- Top Header -->
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h2 class="text-info mb-0"><i class="fa-solid fa-server"></i> Server Control Panel</h2>
+          <small class="text-secondary">Endpoints: <code>/connect</code> | <code>/update.php</code> | <code>/apkhash.php</code> | <code>/hdshrs.php</code></small>
+        </div>
+        <button onclick="logoutAdmin()" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <ul class="nav nav-tabs mb-4" id="adminTabs">
+        <li class="nav-item">
+          <a class="nav-link active" href="#" onclick="switchTab('keysTab', this)"><i class="fa-solid fa-key"></i> License Keys</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-sliders"></i> App Endpoints & Config</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" onclick="switchTab('profileTab', this)"><i class="fa-solid fa-user-shield text-info"></i> Admin Profile</a>
+        </li>
+      </ul>
+
+      <!-- TAB 1: LICENSE KEYS -->
+      <div id="keysTab">
+        <div class="row g-4">
+          
+          <!-- Key Generator Form -->
+          <div class="col-lg-4">
+            <div class="card shadow">
+              <div class="card-header"><i class="fa-solid fa-plus-circle text-info"></i> Create New Key</div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <label class="form-label small">Days (दिन):</label>
+                    <input type="number" id="newKeyDays" class="form-control" value="30" min="0">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">Hours (घंटे):</label>
+                    <input type="number" id="newKeyHours" class="form-control" value="0" min="0">
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Note / Customer Name (नोट / ग्राहक):</label>
+                  <input type="text" id="newKeyNote" class="form-control" placeholder="Optional (उदा. John Doe)">
+                </div>
+                <button onclick="createKey()" class="btn btn-info w-100 fw-bold py-2"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate VIP Key</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keys List Table -->
+          <div class="col-lg-8">
+            <div class="card shadow">
+              <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="fa-solid fa-list text-info"></i> License Keys (<span id="keyCount">0</span>)</span>
+                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-rotate"></i> Refresh</button>
+              </div>
+
+              <!-- SEARCH & FILTER TOOLBAR -->
+              <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50">
+                <div class="row g-2 align-items-center">
+                  <div class="col-md-7">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-dark border-secondary text-info"><i class="fa-solid fa-magnifying-glass"></i></span>
+                      <input type="text" id="searchKeyInput" class="form-control" placeholder="Search Key, Note, HWID..." oninput="filterKeys()">
+                      <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <select id="statusFilterSelect" class="form-select form-select-sm" onchange="filterKeys()">
+                      <option value="all">🔍 All Keys (सभी कीज़)</option>
+                      <option value="active">🟢 Active Keys (चालू)</option>
+                      <option value="expired">🔴 Expired Keys (एक्सपायर)</option>
+                      <option value="bound">📱 Bound (डिवाइस लॉक)</option>
+                      <option value="unbound">🔓 Not Bound (फ्री डिवाइस)</option>
+                      <option value="blocked">⛔ Blocked (ब्लॉक की गई)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-body p-0 table-responsive">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                  <thead>
+                    <tr class="text-secondary small">
+                      <th>License Key</th>
+                      <th>Expires</th>
+                      <th>Device (HWID)</th>
+                      <th>Status</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="keysTableBody">
+                    <tr><td colspan="5" class="text-center py-4 text-secondary">Loading keys...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TAB 2: APP UPDATE & CONFIG -->
+      <div id="appUpdateTab" style="display: none;">
+        <div class="card shadow mb-4">
+          <div class="card-header"><i class="fa-solid fa-globe text-info"></i> Branding Info (<code>/connect</code>)</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small">Client Name:</label>
+                <input type="text" id="clientName" class="form-control" placeholder="ANGRY MOD">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">License String:</label>
+                <input type="text" id="clientLicense" class="form-control" placeholder="Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">Author:</label>
+                <input type="text" id="clientAuthor" class="form-control" placeholder="@hawali7">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">Telegram Link:</label>
+                <input type="text" id="clientTelegram" class="form-control" placeholder="https://t.me/angrymodofficials">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow mb-4">
+          <div class="card-header"><i class="fa-solid fa-file-code text-info"></i> Custom Config / Server State (<code>/hdshrs.php</code>)</div>
+          <div class="card-body">
+            <label class="form-label small">JSON Response for <code>/hdshrs.php</code>:</label>
+            <textarea id="customConfigJson" class="form-control font-monospace" rows="4" placeholder='{"status": "active", "message": "Server OK"}'></textarea>
+            <small class="text-secondary">Enter valid JSON to be served from the /hdshrs.php endpoint.</small>
+          </div>
+        </div>
+
+        <div class="card shadow mb-4">
+          <div class="card-header"><i class="fa-solid fa-cloud-arrow-down text-info"></i> App Update Configuration (<code>/update.php</code>)</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small">Latest App Version:</label>
+                <input type="text" id="updateVersion" class="form-control" placeholder="1.0.0">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">APK Download URL:</label>
+                <input type="text" id="updateUrl" class="form-control" placeholder="https://mywebsite.com/download.apk">
+              </div>
+              <div class="col-12">
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" id="forceUpdateCheck">
+                  <label class="form-check-label" for="forceUpdateCheck">Force Update (Users must update to use app)</label>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label small">Changelog / Update Message:</label>
+                <textarea id="updateChangelog" class="form-control" rows="2" placeholder="Bug fixes and new features added."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow">
+          <div class="card-header"><i class="fa-solid fa-fingerprint text-info"></i> APK Hash / Anti-Tamper Check (<code>/apkhash.php</code>)</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label small">Expected Original APK SHA256 / Hash:</label>
+              <input type="text" id="apkHash" class="form-control" placeholder="e.g. e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855">
+            </div>
+            <button onclick="saveSettings()" class="btn btn-success fw-bold"><i class="fa-solid fa-floppy-disk"></i> Save All Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: ADMIN PROFILE & SECURITY -->
+      <div id="profileTab" style="display: none;">
+        <div class="row g-4">
+          
+          <!-- Admin Info Card -->
+          <div class="col-lg-5">
+            <div class="card shadow mb-4">
+              <div class="card-header"><i class="fa-solid fa-id-badge text-info"></i> Administrator Details</div>
+              <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                  <div class="bg-dark rounded-circle p-3 text-info border border-secondary">
+                    <i class="fa-solid fa-user-gear fa-2x"></i>
+                  </div>
+                  <div>
+                    <h5 class="mb-0 text-white fw-bold">Super Admin</h5>
+                    <small class="badge badge-active mt-1"><i class="fa-solid fa-circle-check"></i> Logged In</small>
+                  </div>
+                </div>
+                
+                <ul class="list-group list-group-flush bg-transparent">
+                  <li class="list-group-item bg-transparent text-secondary px-0 d-flex justify-content-between">
+                    <span>Role:</span>
+                    <strong class="text-info">Full Access / Owner</strong>
+                  </li>
+                  <li class="list-group-item bg-transparent text-secondary px-0 d-flex justify-content-between">
+                    <span>Server Status:</span>
+                    <span class="text-success"><i class="fa-solid fa-signal"></i> Operational (24/7)</span>
+                  </li>
+                  <li class="list-group-item bg-transparent text-secondary px-0 d-flex justify-content-between">
+                    <span>Database:</span>
+                    <span class="text-light">keys.json (Server Storage)</span>
+                  </li>
+                </ul>
+
+                <hr class="border-secondary my-3">
+                <button onclick="clearSavedBrowserData()" class="btn btn-outline-warning btn-sm w-100">
+                  <i class="fa-solid fa-eraser"></i> Clear Saved Password on this Browser
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Change Password Form Card -->
+          <div class="col-lg-7">
+            <div class="card shadow">
+              <div class="card-header"><i class="fa-solid fa-key text-info"></i> Change Admin Password</div>
+              <div class="card-body">
+                
+                <div id="changePassAlert" class="alert small mb-3" style="display: none;"></div>
+
+                <div class="mb-3">
+                  <label class="form-label small">Current Admin Password (पुराना पासवर्ड):</label>
+                  <div class="input-group">
+                    <input type="password" id="currentAdminPassInput" class="form-control" placeholder="Enter current password">
+                    <button class="btn btn-outline-secondary" type="button" onclick="toggleInputEye('currentAdminPassInput', 'eyeIconCur')" style="border-color: #475569;">
+                      <i class="fa-solid fa-eye" id="eyeIconCur" style="color: #38bdf8;"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small">New Admin Password (नया पासवर्ड):</label>
+                  <div class="input-group">
+                    <input type="password" id="newAdminPassInput" class="form-control" placeholder="Enter new password (कम से कम 3 अक्षर)">
+                    <button class="btn btn-outline-secondary" type="button" onclick="toggleInputEye('newAdminPassInput', 'eyeIconNew')" style="border-color: #475569;">
+                      <i class="fa-solid fa-eye" id="eyeIconNew" style="color: #38bdf8;"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small">Confirm New Password (दोबारा नया पासवर्ड):</label>
+                  <div class="input-group">
+                    <input type="password" id="confirmAdminPassInput" class="form-control" placeholder="Re-type new password">
+                    <button class="btn btn-outline-secondary" type="button" onclick="toggleInputEye('confirmAdminPassInput', 'eyeIconConf')" style="border-color: #475569;">
+                      <i class="fa-solid fa-eye" id="eyeIconConf" style="color: #38bdf8;"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <button onclick="changeAdminPassword()" class="btn btn-info fw-bold w-100 py-2">
+                  <i class="fa-solid fa-shield-check"></i> Update Password (पासवर्ड बदलें)
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentToken = localStorage.getItem('admin_token') || '';
+    const savedPassword = localStorage.getItem('saved_admin_pass') || '';
+
+    if (savedPassword) {
+      const passInput = document.getElementById('adminPasswordInput');
+      if (passInput) passInput.value = savedPassword;
+    }
+
+    if (currentToken) {
+      showDashboard();
+    }
+
+    function togglePasswordVisibility() {
+      const passInput = document.getElementById('adminPasswordInput');
+      const eyeIcon = document.getElementById('eyeIcon');
+      if (passInput.type === 'password') {
+        passInput.type = 'text';
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+      } else {
+        passInput.type = 'password';
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+      }
+    }
+
+    function toggleInputEye(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    function switchTab(tabId, el) {
+      document.getElementById('keysTab').style.display = tabId === 'keysTab' ? 'block' : 'none';
+      document.getElementById('appUpdateTab').style.display = tabId === 'appUpdateTab' ? 'block' : 'none';
+      document.getElementById('profileTab').style.display = tabId === 'profileTab' ? 'block' : 'none';
+      document.querySelectorAll('#adminTabs .nav-link').forEach(link => link.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    async function loginAdmin() {
+      const password = document.getElementById('adminPasswordInput').value;
+      const rememberCheck = document.getElementById('rememberPasswordCheck');
+      
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        currentToken = data.token;
+        localStorage.setItem('admin_token', currentToken);
+        if (rememberCheck && rememberCheck.checked) {
+          localStorage.setItem('saved_admin_pass', password);
+        } else {
+          localStorage.removeItem('saved_admin_pass');
+        }
+        showDashboard();
+      } else {
+        const errEl = document.getElementById('loginError');
+        errEl.innerText = data.reason || 'Incorrect password';
+        errEl.style.display = 'block';
+      }
+    }
+
+    function logoutAdmin() {
+      localStorage.removeItem('admin_token');
+      currentToken = '';
+      document.getElementById('dashboardScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+      // If password was saved, keep it prefilled
+      const saved = localStorage.getItem('saved_admin_pass');
+      if (saved) {
+        document.getElementById('adminPasswordInput').value = saved;
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('dashboardScreen').style.display = 'block';
+      fetchDashboardData();
+    }
+
+    async function fetchDashboardData() {
+      try {
+        const res = await fetch('/api/admin/data', {
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (res.status === 401) return logoutAdmin();
+        const json = await res.json();
+        renderData(json.data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    let cachedKeys = {};
+
+    function filterKeys() {
+      const searchTerm = (document.getElementById('searchKeyInput')?.value || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('statusFilterSelect')?.value || 'all';
+      const tbody = document.getElementById('keysTableBody');
+
+      const allKeyNames = Object.keys(cachedKeys);
+      document.getElementById('keyCount').innerText = allKeyNames.length;
+
+      if (allKeyNames.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-secondary">No keys generated yet.</td></tr>';
+        return;
+      }
+
+      const filteredNames = allKeyNames.filter(k => {
+        const item = cachedKeys[k];
+        const isExpired = new Date() > new Date(item.expiresAt);
+        const note = (item.note || '').toLowerCase();
+        const deviceId = (item.deviceId || '').toLowerCase();
+        const keyName = k.toLowerCase();
+
+        // 1. Search text filter
+        if (searchTerm) {
+          const matchesSearch = keyName.includes(searchTerm) || note.includes(searchTerm) || deviceId.includes(searchTerm);
+          if (!matchesSearch) return false;
+        }
+
+        // 2. Status filter
+        if (statusFilter === 'active') {
+          return item.isActive && !isExpired;
+        } else if (statusFilter === 'expired') {
+          return isExpired;
+        } else if (statusFilter === 'bound') {
+          return !!item.deviceId;
+        } else if (statusFilter === 'unbound') {
+          return !item.deviceId;
+        } else if (statusFilter === 'blocked') {
+          return !item.isActive;
+        }
+
+        return true;
+      });
+
+      if (filteredNames.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i> No keys matching your filter/search. 
+          <button class="btn btn-link btn-sm text-info p-0 ms-1" onclick="clearSearch()">Clear Filters</button>
+        </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filteredNames.map(k => {
+        const item = cachedKeys[k];
+        const isExpired = new Date() > new Date(item.expiresAt);
+        const expFormatted = new Date(item.expiresAt).toLocaleDateString() + ' ' + new Date(item.expiresAt).toLocaleTimeString();
+        
+        return `<tr>
+          <td>
+            <div class="fw-bold text-info cursor-pointer" onclick="copyKey('${k}')" title="Click to copy">
+              ${k} <i class="fa-regular fa-copy small ms-1"></i>
+            </div>
+            ${item.note ? '<small class="text-secondary">' + item.note + '</small>' : ''}
+          </td>
+          <td class="small ${isExpired ? 'text-danger' : 'text-success'}">
+            ${expFormatted}
+          </td>
+          <td>
+            ${item.deviceId ? '<span class="badge badge-bound" title="' + item.deviceId + '"><i class="fa-solid fa-mobile-screen"></i> Locked</span>' : '<span class="badge badge-unbound">Not Bound</span>'}
+          </td>
+          <td>
+            ${isExpired ? '<span class="badge badge-expired">Expired</span>' : (item.isActive ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-expired">Blocked</span>')}
+          </td>
+          <td class="text-end">
+            ${item.deviceId ? '<button onclick="resetHwid(\''+k+'\')" class="btn btn-sm btn-outline-warning me-1" title="Reset Device Binding"><i class="fa-solid fa-arrows-rotate"></i></button>' : ''}
+            <button onclick="toggleKey(\''+k+'\')" class="btn btn-sm btn-outline-secondary me-1" title="Block/Unblock"><i class="fa-solid fa-power-off"></i></button>
+            <button onclick="deleteKey(\''+k+'\')" class="btn btn-sm btn-outline-danger" title="Delete Key"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function clearSearch() {
+      const sInput = document.getElementById('searchKeyInput');
+      const sFilter = document.getElementById('statusFilterSelect');
+      if (sInput) sInput.value = '';
+      if (sFilter) sFilter.value = 'all';
+      filterKeys();
+    }
+
+    function renderData(data) {
+      // Save and render keys
+      cachedKeys = data.keys || {};
+      filterKeys();
+
+      // Render App Update & Security & Branding & Custom Config
+      if (data.app_update) {
+        document.getElementById('updateVersion').value = data.app_update.latest_version || '';
+        document.getElementById('updateUrl').value = data.app_update.apk_url || '';
+        document.getElementById('forceUpdateCheck').checked = !!data.app_update.force_update;
+        document.getElementById('updateChangelog').value = data.app_update.changelog || '';
+      }
+      if (data.security) {
+        document.getElementById('apkHash').value = data.security.apk_hash || '';
+      }
+      if (data.web_info) {
+        document.getElementById('clientName').value = data.web_info.client || 'ANGRY MOD';
+        document.getElementById('clientLicense').value = data.web_info.license || 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM';
+        document.getElementById('clientAuthor').value = data.web_info.author || '@hawali7';
+        document.getElementById('clientTelegram').value = data.web_info.telegram || 'https://t.me/angrymodofficials';
+      }
+      if (data.custom_config) {
+        document.getElementById('customConfigJson').value = JSON.stringify(data.custom_config, null, 2);
+      }
+    }
+
+    async function createKey() {
+      const days = document.getElementById('newKeyDays').value;
+      const hours = document.getElementById('newKeyHours').value;
+      const note = document.getElementById('newKeyNote').value;
+
+      const res = await fetch('/api/admin/create-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ durationDays: days, durationHours: hours, note })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        alert('नई VIP Key बन गई है:\n' + data.key);
+        document.getElementById('newKeyNote').value = '';
+        fetchDashboardData();
+      } else {
+        alert('Error: ' + data.reason);
+      }
+    }
+
+    async function deleteKey(key) {
+      if (!confirm('Are you sure you want to delete ' + key + '?')) return;
+      await fetch('/api/admin/delete-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      fetchDashboardData();
+    }
+
+    async function resetHwid(key) {
+      await fetch('/api/admin/reset-hwid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      alert('Device reset! Key can now be used on a new device.');
+      fetchDashboardData();
+    }
+
+    async function toggleKey(key) {
+      await fetch('/api/admin/toggle-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      fetchDashboardData();
+    }
+
+    async function saveSettings() {
+      const latest_version = document.getElementById('updateVersion').value;
+      const apk_url = document.getElementById('updateUrl').value;
+      const force_update = document.getElementById('forceUpdateCheck').checked;
+      const changelog = document.getElementById('updateChangelog').value;
+      const apk_hash = document.getElementById('apkHash').value;
+      const client_name = document.getElementById('clientName').value;
+      const client_license = document.getElementById('clientLicense').value;
+      const client_author = document.getElementById('clientAuthor').value;
+      const client_telegram = document.getElementById('clientTelegram').value;
+      const custom_config_json = document.getElementById('customConfigJson').value;
+
+      const res = await fetch('/api/admin/update-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram, custom_config_json })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        alert('Settings saved successfully!');
+        fetchDashboardData();
+      }
+    }
+
+    function copyKey(key) {
+      navigator.clipboard.writeText(key);
+      alert('Copied to clipboard: ' + key);
+    }
+
+    async function changeAdminPassword() {
+      const currentPassword = document.getElementById('currentAdminPassInput').value.trim();
+      const newPassword = document.getElementById('newAdminPassInput').value.trim();
+      const confirmPassword = document.getElementById('confirmAdminPassInput').value.trim();
+      const alertEl = document.getElementById('changePassAlert');
+
+      alertEl.style.display = 'none';
+      alertEl.className = 'alert small mb-3';
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        alertEl.className = 'alert alert-danger small mb-3';
+        alertEl.innerText = 'कृपया सभी बॉक्स भरें (Please fill all fields)';
+        alertEl.style.display = 'block';
+        return;
+      }
+
+      if (newPassword.length < 3) {
+        alertEl.className = 'alert alert-danger small mb-3';
+        alertEl.innerText = 'नया पासवर्ड कम से कम 3 अक्षरों का होना चाहिए (Min 3 characters)';
+        alertEl.style.display = 'block';
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        alertEl.className = 'alert alert-danger small mb-3';
+        alertEl.innerText = 'नया पासवर्ड और कन्फर्म पासवर्ड मैच नहीं कर रहे हैं (Passwords do not match)';
+        alertEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + currentToken
+          },
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          // Update the token in localStorage and memory so user stays logged in
+          currentToken = data.token;
+          localStorage.setItem('admin_token', currentToken);
+          if (localStorage.getItem('saved_admin_pass')) {
+            localStorage.setItem('saved_admin_pass', newPassword);
+          }
+
+          alertEl.className = 'alert alert-success small mb-3';
+          alertEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> पासवर्ड सफलतापूर्वक बदल दिया गया है! (Password updated)';
+          alertEl.style.display = 'block';
+
+          // Clear input fields
+          document.getElementById('currentAdminPassInput').value = '';
+          document.getElementById('newAdminPassInput').value = '';
+          document.getElementById('confirmAdminPassInput').value = '';
+        } else {
+          alertEl.className = 'alert alert-danger small mb-3';
+          alertEl.innerText = 'त्रुटि: ' + (data.reason || 'Failed to update password');
+          alertEl.style.display = 'block';
+        }
+      } catch (err) {
+        alertEl.className = 'alert alert-danger small mb-3';
+        alertEl.innerText = 'सर्वर कनेक्शन त्रुटि: ' + err.message;
+        alertEl.style.display = 'block';
+      }
+    }
+
+    function clearSavedBrowserData() {
+      if (confirm('क्या आप इस ब्राउज़र से सेव किया गया पासवर्ड हटाना चाहते हैं?')) {
+        localStorage.removeItem('saved_admin_pass');
+        const passInput = document.getElementById('adminPasswordInput');
+        if (passInput) passInput.value = '';
+        alert('सेव किया गया पासवर्ड ब्राउज़र से हटा दिया गया है!');
+      }
+    }
+  </script>
+</body>
+</html>

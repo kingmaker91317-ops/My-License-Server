@@ -234,9 +234,16 @@ app.get('/hdshrs', handleHdshrs);
 // ==========================================
 // 5. ADMIN API ENDPOINTS
 // ==========================================
+function getAdminPassword() {
+  const db = getDb();
+  if (db.admin_password) return db.admin_password;
+  return ADMIN_PASSWORD;
+}
+
 function checkAdminAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader === `Bearer ${ADMIN_PASSWORD}`) {
+  const currentPass = getAdminPassword();
+  if (authHeader && authHeader === `Bearer ${currentPass}`) {
     return next();
   }
   return res.status(401).json({ status: 'failed', reason: 'Unauthorized Admin' });
@@ -244,10 +251,34 @@ function checkAdminAuth(req, res, next) {
 
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body || {};
-  if (password === ADMIN_PASSWORD) {
-    return res.json({ status: 'success', token: ADMIN_PASSWORD });
+  const currentPass = getAdminPassword();
+  if (password === currentPass) {
+    return res.json({ status: 'success', token: currentPass });
   }
   return res.status(401).json({ status: 'failed', reason: 'Wrong password' });
+});
+
+app.post('/api/admin/change-password', checkAdminAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  const currentPass = getAdminPassword();
+
+  if (currentPassword !== currentPass) {
+    return res.status(400).json({ status: 'failed', reason: 'Current password does not match' });
+  }
+
+  if (!newPassword || newPassword.trim().length < 3) {
+    return res.status(400).json({ status: 'failed', reason: 'New password must be at least 3 characters long' });
+  }
+
+  const db = getDb();
+  db.admin_password = newPassword.trim();
+  saveDb(db);
+
+  return res.json({
+    status: 'success',
+    token: db.admin_password,
+    message: 'Admin password updated successfully!'
+  });
 });
 
 app.get('/api/admin/data', checkAdminAuth, (req, res) => {
@@ -270,7 +301,7 @@ app.post('/api/admin/create-key', checkAdminAuth, (req, res) => {
   const randomStr = crypto.randomBytes(4).toString('hex').toUpperCase();
   const keyName = (prefix && prefix.trim()) 
     ? `${prefix.trim().toUpperCase()}-${randomStr}` 
-    : `KEY-${randomStr}`;
+    : `VIP-${randomStr}`;
 
   const expiresAt = new Date(Date.now() + totalMs).toISOString();
 
@@ -354,411 +385,12 @@ app.post('/api/admin/update-settings', checkAdminAuth, (req, res) => {
 });
 
 // ==========================================
-// 6. ADMIN WEB PANEL UI (HTML/CSS/JS at root `/`)
+// 6. ADMIN WEB PANEL UI (HTML/CSS/JS at public/index.html)
 // ==========================================
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.get('/', (req, res) => {
-  res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - License & Server Manager</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; }
-    .card-header { background-color: #334155; border-bottom: 1px solid #475569; font-weight: 600; }
-    .form-control, .form-select { background-color: #0f172a; border-color: #475569; color: #f8fafc; }
-    .form-control:focus, .form-select:focus { background-color: #0f172a; border-color: #38bdf8; color: #f8fafc; box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25); }
-    .table { color: #f8fafc; }
-    .table-dark { background-color: #1e293b; }
-    .badge-active { background-color: #10b981; }
-    .badge-expired { background-color: #ef4444; }
-    .badge-bound { background-color: #6366f1; }
-    .badge-unbound { background-color: #f59e0b; }
-    .nav-tabs .nav-link { color: #94a3b8; }
-    .nav-tabs .nav-link.active { background-color: #1e293b; border-color: #334155 #334155 #1e293b; color: #38bdf8; font-weight: 600; }
-  </style>
-</head>
-<body class="p-3 p-md-5">
-
-  <div class="container" style="max-width: 1100px;">
-    
-    <!-- LOGIN SCREEN -->
-    <div id="loginScreen" class="row justify-content-center" style="margin-top: 100px;">
-      <div class="col-md-5">
-        <div class="card shadow-lg p-4 text-center">
-          <h3 class="mb-3 text-info"><i class="fa-solid fa-shield-halved"></i> License Admin</h3>
-          <p class="text-secondary small">Enter Admin Password to manage keys & endpoints</p>
-          <div class="mb-3">
-            <input type="password" id="adminPasswordInput" class="form-control text-center form-control-lg" placeholder="Admin Password (default: admin123)">
-          </div>
-          <button onclick="loginAdmin()" class="btn btn-info w-100 btn-lg fw-bold"><i class="fa-solid fa-lock-open"></i> Login</button>
-          <div id="loginError" class="text-danger mt-2 small" style="display:none;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MAIN DASHBOARD (Initially Hidden) -->
-    <div id="dashboardScreen" style="display: none;">
-      
-      <!-- Top Header -->
-      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-          <h2 class="text-info mb-0"><i class="fa-solid fa-server"></i> Server Control Panel</h2>
-          <small class="text-secondary">Endpoints: <code>/connect</code> | <code>/update.php</code> | <code>/apkhash.php</code> | <code>/hdshrs.php</code></small>
-        </div>
-        <button onclick="logoutAdmin()" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
-      </div>
-
-      <!-- Navigation Tabs -->
-      <ul class="nav nav-tabs mb-4" id="adminTabs">
-        <li class="nav-item">
-          <a class="nav-link active" href="#" onclick="switchTab('keysTab', this)"><i class="fa-solid fa-key"></i> License Keys</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-sliders"></i> App Endpoints & Config</a>
-        </li>
-      </ul>
-
-      <!-- TAB 1: LICENSE KEYS -->
-      <div id="keysTab">
-        <div class="row g-4">
-          
-          <!-- Key Generator Form -->
-          <div class="col-lg-4">
-            <div class="card shadow">
-              <div class="card-header"><i class="fa-solid fa-plus-circle text-info"></i> Create New Key</div>
-              <div class="card-body">
-                <div class="mb-3">
-                  <label class="form-label small">Key Prefix (e.g. VIP, USER, PRO):</label>
-                  <input type="text" id="newKeyPrefix" class="form-control" placeholder="VIP" value="VIP">
-                </div>
-                <div class="row mb-3">
-                  <div class="col-6">
-                    <label class="form-label small">Days:</label>
-                    <input type="number" id="newKeyDays" class="form-control" value="30" min="0">
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small">Hours:</label>
-                    <input type="number" id="newKeyHours" class="form-control" value="0" min="0">
-                  </div>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label small">Note / Customer Name:</label>
-                  <input type="text" id="newKeyNote" class="form-control" placeholder="John Doe">
-                </div>
-                <button onclick="createKey()" class="btn btn-info w-100 fw-bold"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Key</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Keys List Table -->
-          <div class="col-lg-8">
-            <div class="card shadow">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fa-solid fa-list text-info"></i> Active Keys (<span id="keyCount">0</span>)</span>
-                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-rotate"></i> Refresh</button>
-              </div>
-              <div class="card-body p-0 table-responsive">
-                <table class="table table-dark table-hover mb-0 align-middle">
-                  <thead>
-                    <tr class="text-secondary small">
-                      <th>License Key</th>
-                      <th>Expires</th>
-                      <th>Device (HWID)</th>
-                      <th>Status</th>
-                      <th class="text-end">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="keysTableBody">
-                    <tr><td colspan="5" class="text-center py-4 text-secondary">Loading keys...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- TAB 2: APP UPDATE & CONFIG -->
-      <div id="appUpdateTab" style="display: none;">
-        <div class="card shadow mb-4">
-          <div class="card-header"><i class="fa-solid fa-globe text-info"></i> Branding Info (<code>/connect</code>)</div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label small">Client Name:</label>
-                <input type="text" id="clientName" class="form-control" placeholder="ANGRY MOD">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small">License String:</label>
-                <input type="text" id="clientLicense" class="form-control" placeholder="Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small">Author:</label>
-                <input type="text" id="clientAuthor" class="form-control" placeholder="@hawali7">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small">Telegram Link:</label>
-                <input type="text" id="clientTelegram" class="form-control" placeholder="https://t.me/angrymodofficials">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card shadow mb-4">
-          <div class="card-header"><i class="fa-solid fa-file-code text-info"></i> Custom Config / Server State (<code>/hdshrs.php</code>)</div>
-          <div class="card-body">
-            <label class="form-label small">JSON Response for <code>/hdshrs.php</code>:</label>
-            <textarea id="customConfigJson" class="form-control font-monospace" rows="4" placeholder='{"status": "active", "message": "Server OK"}'></textarea>
-            <small class="text-secondary">Enter valid JSON to be served from the /hdshrs.php endpoint.</small>
-          </div>
-        </div>
-
-        <div class="card shadow mb-4">
-          <div class="card-header"><i class="fa-solid fa-cloud-arrow-down text-info"></i> App Update Configuration (<code>/update.php</code>)</div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label small">Latest App Version:</label>
-                <input type="text" id="updateVersion" class="form-control" placeholder="1.0.0">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small">APK Download URL:</label>
-                <input type="text" id="updateUrl" class="form-control" placeholder="https://mywebsite.com/download.apk">
-              </div>
-              <div class="col-12">
-                <div class="form-check form-switch mt-2">
-                  <input class="form-check-input" type="checkbox" id="forceUpdateCheck">
-                  <label class="form-check-label" for="forceUpdateCheck">Force Update (Users must update to use app)</label>
-                </div>
-              </div>
-              <div class="col-12">
-                <label class="form-label small">Changelog / Update Message:</label>
-                <textarea id="updateChangelog" class="form-control" rows="2" placeholder="Bug fixes and new features added."></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card shadow">
-          <div class="card-header"><i class="fa-solid fa-fingerprint text-info"></i> APK Hash / Anti-Tamper Check (<code>/apkhash.php</code>)</div>
-          <div class="card-body">
-            <div class="mb-3">
-              <label class="form-label small">Expected Original APK SHA256 / Hash:</label>
-              <input type="text" id="apkHash" class="form-control" placeholder="e.g. e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855">
-            </div>
-            <button onclick="saveSettings()" class="btn btn-success fw-bold"><i class="fa-solid fa-floppy-disk"></i> Save All Settings</button>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <script>
-    let currentToken = localStorage.getItem('admin_token') || '';
-
-    if (currentToken) {
-      showDashboard();
-    }
-
-    function switchTab(tabId, el) {
-      document.getElementById('keysTab').style.display = tabId === 'keysTab' ? 'block' : 'none';
-      document.getElementById('appUpdateTab').style.display = tabId === 'appUpdateTab' ? 'block' : 'none';
-      document.querySelectorAll('#adminTabs .nav-link').forEach(link => link.classList.remove('active'));
-      el.classList.add('active');
-    }
-
-    async function loginAdmin() {
-      const password = document.getElementById('adminPasswordInput').value;
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        currentToken = data.token;
-        localStorage.setItem('admin_token', currentToken);
-        showDashboard();
-      } else {
-        const errEl = document.getElementById('loginError');
-        errEl.innerText = data.reason || 'Incorrect password';
-        errEl.style.display = 'block';
-      }
-    }
-
-    function logoutAdmin() {
-      localStorage.removeItem('admin_token');
-      currentToken = '';
-      document.getElementById('dashboardScreen').style.display = 'none';
-      document.getElementById('loginScreen').style.display = 'flex';
-    }
-
-    function showDashboard() {
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('dashboardScreen').style.display = 'block';
-      fetchDashboardData();
-    }
-
-    async function fetchDashboardData() {
-      try {
-        const res = await fetch('/api/admin/data', {
-          headers: { 'Authorization': 'Bearer ' + currentToken }
-        });
-        if (res.status === 401) return logoutAdmin();
-        const json = await res.json();
-        renderData(json.data);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    function renderData(data) {
-      // Render Keys
-      const tbody = document.getElementById('keysTableBody');
-      const keys = data.keys || {};
-      const keyNames = Object.keys(keys);
-      document.getElementById('keyCount').innerText = keyNames.length;
-
-      if (keyNames.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-secondary">No keys generated yet.</td></tr>';
-      } else {
-        tbody.innerHTML = keyNames.map(k => {
-          const item = keys[k];
-          const isExpired = new Date() > new Date(item.expiresAt);
-          const expFormatted = new Date(item.expiresAt).toLocaleDateString() + ' ' + new Date(item.expiresAt).toLocaleTimeString();
-          
-          return \`<tr>
-            <td>
-              <div class="fw-bold text-info cursor-pointer" onclick="copyKey('\${k}')" title="Click to copy">
-                \${k} <i class="fa-regular fa-copy small ms-1"></i>
-              </div>
-              \${item.note ? '<small class="text-secondary">' + item.note + '</small>' : ''}
-            </td>
-            <td class="small \${isExpired ? 'text-danger' : 'text-success'}">
-              \${expFormatted}
-            </td>
-            <td>
-              \${item.deviceId ? '<span class="badge badge-bound" title="' + item.deviceId + '"><i class="fa-solid fa-mobile-screen"></i> Locked</span>' : '<span class="badge badge-unbound">Not Bound</span>'}
-            </td>
-            <td>
-              \${isExpired ? '<span class="badge badge-expired">Expired</span>' : (item.isActive ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-expired">Blocked</span>')}
-            </td>
-            <td class="text-end">
-              \${item.deviceId ? '<button onclick="resetHwid(\\''+k+'\\')" class="btn btn-sm btn-outline-warning me-1" title="Reset Device Binding"><i class="fa-solid fa-arrows-rotate"></i></button>' : ''}
-              <button onclick="toggleKey(\\''+k+'\\')" class="btn btn-sm btn-outline-secondary me-1" title="Block/Unblock"><i class="fa-solid fa-power-off"></i></button>
-              <button onclick="deleteKey(\\''+k+'\\')" class="btn btn-sm btn-outline-danger" title="Delete Key"><i class="fa-solid fa-trash"></i></button>
-            </td>
-          </tr>\`;
-        }).join('');
-      }
-
-      // Render App Update & Security & Branding & Custom Config
-      if (data.app_update) {
-        document.getElementById('updateVersion').value = data.app_update.latest_version || '';
-        document.getElementById('updateUrl').value = data.app_update.apk_url || '';
-        document.getElementById('forceUpdateCheck').checked = !!data.app_update.force_update;
-        document.getElementById('updateChangelog').value = data.app_update.changelog || '';
-      }
-      if (data.security) {
-        document.getElementById('apkHash').value = data.security.apk_hash || '';
-      }
-      if (data.web_info) {
-        document.getElementById('clientName').value = data.web_info.client || 'ANGRY MOD';
-        document.getElementById('clientLicense').value = data.web_info.license || 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM';
-        document.getElementById('clientAuthor').value = data.web_info.author || '@hawali7';
-        document.getElementById('clientTelegram').value = data.web_info.telegram || 'https://t.me/angrymodofficials';
-      }
-      if (data.custom_config) {
-        document.getElementById('customConfigJson').value = JSON.stringify(data.custom_config, null, 2);
-      }
-    }
-
-    async function createKey() {
-      const prefix = document.getElementById('newKeyPrefix').value;
-      const days = document.getElementById('newKeyDays').value;
-      const hours = document.getElementById('newKeyHours').value;
-      const note = document.getElementById('newKeyNote').value;
-
-      const res = await fetch('/api/admin/create-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ prefix, durationDays: days, durationHours: hours, note })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        alert('Key created successfully: ' + data.key);
-        fetchDashboardData();
-      } else {
-        alert('Error: ' + data.reason);
-      }
-    }
-
-    async function deleteKey(key) {
-      if (!confirm('Are you sure you want to delete ' + key + '?')) return;
-      await fetch('/api/admin/delete-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ key })
-      });
-      fetchDashboardData();
-    }
-
-    async function resetHwid(key) {
-      await fetch('/api/admin/reset-hwid', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ key })
-      });
-      alert('Device reset! Key can now be used on a new device.');
-      fetchDashboardData();
-    }
-
-    async function toggleKey(key) {
-      await fetch('/api/admin/toggle-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ key })
-      });
-      fetchDashboardData();
-    }
-
-    async function saveSettings() {
-      const latest_version = document.getElementById('updateVersion').value;
-      const apk_url = document.getElementById('updateUrl').value;
-      const force_update = document.getElementById('forceUpdateCheck').checked;
-      const changelog = document.getElementById('updateChangelog').value;
-      const apk_hash = document.getElementById('apkHash').value;
-      const client_name = document.getElementById('clientName').value;
-      const client_license = document.getElementById('clientLicense').value;
-      const client_author = document.getElementById('clientAuthor').value;
-      const client_telegram = document.getElementById('clientTelegram').value;
-      const custom_config_json = document.getElementById('customConfigJson').value;
-
-      const res = await fetch('/api/admin/update-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram, custom_config_json })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        alert('Settings saved successfully!');
-        fetchDashboardData();
-      }
-    }
-
-    function copyKey(key) {
-      navigator.clipboard.writeText(key);
-      alert('Copied to clipboard: ' + key);
-    }
-  </script>
-</body>
-</html>`);
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
