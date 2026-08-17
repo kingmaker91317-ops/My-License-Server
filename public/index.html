@@ -60,7 +60,7 @@
       <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
           <h2 class="text-info mb-0"><i class="fa-solid fa-server"></i> Server Control Panel</h2>
-          <small class="text-secondary">Endpoints: <code>/connect</code> | <code>/update.php</code> | <code>/apkhash.php</code> | <code>/hdshrs.php</code></small>
+          <small class="text-secondary">Endpoints: <code>/connect</code> | <code>/Rverify</code> | <code>/Rmessage</code> | <code>/update.php</code> | <code>/apkhash.php</code> | <code>/hdshrs.php</code></small>
         </div>
         <button onclick="logoutAdmin()" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
       </div>
@@ -69,6 +69,9 @@
       <ul class="nav nav-tabs mb-4" id="adminTabs">
         <li class="nav-item">
           <a class="nav-link active" href="#" onclick="switchTab('keysTab', this)"><i class="fa-solid fa-key"></i> License Keys</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-warning" href="#" onclick="switchTab('ckerTab', this)"><i class="fa-solid fa-crosshairs text-warning"></i> CKER Key Generator</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-sliders"></i> App Endpoints & Config</a>
@@ -150,6 +153,107 @@
                   </thead>
                   <tbody id="keysTableBody">
                     <tr><td colspan="5" class="text-center py-4 text-secondary">Loading keys...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TAB: CKER KEY GENERATOR (YT Studio / HAXX-CKER) -->
+      <div id="ckerTab" style="display: none;">
+        <div class="row g-4">
+          
+          <!-- CKER Key Generator Form -->
+          <div class="col-lg-4">
+            <div class="card shadow" style="border: 1px solid #eab308;">
+              <div class="card-header bg-dark text-warning d-flex align-items-center gap-2" style="border-bottom: 1px solid #eab308;">
+                <i class="fa-solid fa-user-shield"></i> <span>CKER Account Generator (YT Studio)</span>
+              </div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <label class="form-label small">Days (दिन):</label>
+                    <input type="number" id="newCkerDays" class="form-control" value="30" min="0">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">Hours (घंटे):</label>
+                    <input type="number" id="newCkerHours" class="form-control" value="0" min="0">
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Username (यूजरनेम):</label>
+                  <input type="text" id="newCkerUser" class="form-control" placeholder="उदा. gamer123 (खाली छोड़ें तो ऑटो-जनरेट)">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Password (पासवर्ड / Key):</label>
+                  <input type="text" id="newCkerPass" class="form-control" placeholder="उदा. pass123 (खाली छोड़ें तो ऑटो-जनरेट)">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Prefix (अगर यूजरनेम खाली हो):</label>
+                  <input type="text" id="newCkerPrefix" class="form-control" value="CKER" placeholder="उदा. CKER">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Seller Name (ऐप पर दिखने वाला नाम):</label>
+                  <input type="text" id="newCkerSeller" class="form-control" value="HAXX-CKER TEAM" placeholder="HAXX-CKER TEAM">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Note / Customer (ग्राहक का नाम / नोट):</label>
+                  <input type="text" id="newCkerNote" class="form-control" placeholder="उदा. Rahul Player">
+                </div>
+                <button onclick="createCkerKey()" class="btn btn-warning w-100 fw-bold py-2 text-dark"><i class="fa-solid fa-user-plus"></i> Generate User & Password</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CKER Keys List Table -->
+          <div class="col-lg-8">
+            <div class="card shadow" style="border: 1px solid #eab308;">
+              <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid #eab308;">
+                <span class="text-warning"><i class="fa-solid fa-users"></i> CKER Accounts (<span id="ckerKeyCount">0</span>) &mdash; <code>/Rverify</code></span>
+                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-rotate"></i> Refresh</button>
+              </div>
+
+              <!-- SEARCH & FILTER TOOLBAR -->
+              <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50">
+                <div class="row g-2 align-items-center">
+                  <div class="col-md-7">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-dark border-secondary text-warning"><i class="fa-solid fa-magnifying-glass"></i></span>
+                      <input type="text" id="searchCkerInput" class="form-control" placeholder="Search Username, Password, Note, HWID..." oninput="filterCkerKeys()">
+                      <button class="btn btn-outline-secondary" type="button" onclick="clearCkerSearch()" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <select id="statusCkerFilterSelect" class="form-select form-select-sm" onchange="filterCkerKeys()">
+                      <option value="all">🔍 All Accounts (सभी अकाउंट्स)</option>
+                      <option value="active">🟢 Active (चालू)</option>
+                      <option value="expired">🔴 Expired (एक्सपायर)</option>
+                      <option value="bound">📱 Bound (डिवाइस लॉक)</option>
+                      <option value="unbound">🔓 Not Bound (फ्री डिवाइस)</option>
+                      <option value="blocked">⛔ Blocked (ब्लॉक किया गया)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-body p-0 table-responsive">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                  <thead>
+                    <tr class="text-secondary small">
+                      <th>Username</th>
+                      <th>Password</th>
+                      <th>Seller</th>
+                      <th>Expires</th>
+                      <th>Device (HWID)</th>
+                      <th>Status</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ckerKeysTableBody">
+                    <tr><td colspan="7" class="text-center py-4 text-secondary">Loading CKER accounts...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -368,6 +472,7 @@
 
     function switchTab(tabId, el) {
       document.getElementById('keysTab').style.display = tabId === 'keysTab' ? 'block' : 'none';
+      document.getElementById('ckerTab').style.display = tabId === 'ckerTab' ? 'block' : 'none';
       document.getElementById('appUpdateTab').style.display = tabId === 'appUpdateTab' ? 'block' : 'none';
       document.getElementById('profileTab').style.display = tabId === 'profileTab' ? 'block' : 'none';
       document.querySelectorAll('#adminTabs .nav-link').forEach(link => link.classList.remove('active'));
@@ -521,10 +626,173 @@
       filterKeys();
     }
 
+    let cachedCkerKeys = {};
+
+    function filterCkerKeys() {
+      const searchTerm = (document.getElementById('searchCkerInput')?.value || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('statusCkerFilterSelect')?.value || 'all';
+      const tbody = document.getElementById('ckerKeysTableBody');
+
+      const allKeyNames = Object.keys(cachedCkerKeys);
+      const countEl = document.getElementById('ckerKeyCount');
+      if (countEl) countEl.innerText = allKeyNames.length;
+
+      if (!tbody) return;
+
+      if (allKeyNames.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-secondary">No CKER keys generated yet.</td></tr>';
+        return;
+      }
+
+      const filteredNames = allKeyNames.filter(k => {
+        const item = cachedCkerKeys[k];
+        const isExpired = new Date() > new Date(item.expiresAt);
+        const note = (item.note || '').toLowerCase();
+        const seller = (item.seller || '').toLowerCase();
+        const deviceId = (item.deviceId || '').toLowerCase();
+        const keyName = k.toLowerCase();
+
+        if (searchTerm) {
+          const matchesSearch = keyName.includes(searchTerm) || note.includes(searchTerm) || seller.includes(searchTerm) || deviceId.includes(searchTerm);
+          if (!matchesSearch) return false;
+        }
+
+        if (statusFilter === 'active') {
+          return item.isActive && !isExpired;
+        } else if (statusFilter === 'expired') {
+          return isExpired;
+        } else if (statusFilter === 'bound') {
+          return !!item.deviceId;
+        } else if (statusFilter === 'unbound') {
+          return !item.deviceId;
+        } else if (statusFilter === 'blocked') {
+          return !item.isActive;
+        }
+
+        return true;
+      });
+
+      if (filteredNames.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i> No CKER keys matching your filter/search. 
+          <button class="btn btn-link btn-sm text-warning p-0 ms-1" onclick="clearCkerSearch()">Clear Filters</button>
+        </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filteredNames.map(k => {
+        const item = cachedCkerKeys[k];
+        const isExpired = new Date() > new Date(item.expiresAt);
+        const expFormatted = new Date(item.expiresAt).toLocaleDateString() + ' ' + new Date(item.expiresAt).toLocaleTimeString();
+        const userName = item.username || k;
+        const passWord = item.password || k;
+        
+        return `<tr>
+          <td>
+            <div class="fw-bold text-warning cursor-pointer" onclick="copyKey('${userName}')" title="Click to copy Username">
+              ${userName} <i class="fa-regular fa-copy small ms-1"></i>
+            </div>
+            ${item.note ? '<small class="text-secondary">' + item.note + '</small>' : ''}
+          </td>
+          <td>
+            <div class="font-monospace text-info cursor-pointer fw-bold" onclick="copyKey('${passWord}')" title="Click to copy Password">
+              ${passWord} <i class="fa-regular fa-copy small ms-1"></i>
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-dark text-light border border-secondary">${item.seller || 'HAXX-CKER TEAM'}</span>
+          </td>
+          <td class="small ${isExpired ? 'text-danger' : 'text-success'}">
+            ${expFormatted}
+          </td>
+          <td>
+            ${item.deviceId ? '<span class="badge badge-bound" title="' + item.deviceId + '"><i class="fa-solid fa-mobile-screen"></i> Locked</span>' : '<span class="badge badge-unbound">Not Bound</span>'}
+          </td>
+          <td>
+            ${isExpired ? '<span class="badge badge-expired">Expired</span>' : (item.isActive ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-expired">Blocked</span>')}
+          </td>
+          <td class="text-end">
+            ${item.deviceId ? '<button onclick="resetCkerHwid(\''+k+'\')" class="btn btn-sm btn-outline-warning me-1" title="Reset Device Binding"><i class="fa-solid fa-arrows-rotate"></i></button>' : ''}
+            <button onclick="toggleCkerKey(\''+k+'\')" class="btn btn-sm btn-outline-secondary me-1" title="Block/Unblock"><i class="fa-solid fa-power-off"></i></button>
+            <button onclick="deleteCkerKey(\''+k+'\')" class="btn btn-sm btn-outline-danger" title="Delete Account"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function clearCkerSearch() {
+      const sInput = document.getElementById('searchCkerInput');
+      const sFilter = document.getElementById('statusCkerFilterSelect');
+      if (sInput) sInput.value = '';
+      if (sFilter) sFilter.value = 'all';
+      filterCkerKeys();
+    }
+
+    async function createCkerKey() {
+      const days = document.getElementById('newCkerDays').value;
+      const hours = document.getElementById('newCkerHours').value;
+      const username = document.getElementById('newCkerUser').value;
+      const password = document.getElementById('newCkerPass').value;
+      const prefix = document.getElementById('newCkerPrefix').value;
+      const seller = document.getElementById('newCkerSeller').value;
+      const note = document.getElementById('newCkerNote').value;
+
+      const res = await fetch('/api/admin/cker/create-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ durationDays: days, durationHours: hours, username, password, prefix, seller, note })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        const u = data.data.username || data.key;
+        const p = data.data.password || '';
+        alert('नया CKER अकाउंट सफलतापूर्वक बन गया है!\n\nUsername: ' + u + '\nPassword: ' + p);
+        document.getElementById('newCkerUser').value = '';
+        document.getElementById('newCkerPass').value = '';
+        document.getElementById('newCkerNote').value = '';
+        fetchDashboardData();
+      } else {
+        alert('Error: ' + data.reason);
+      }
+    }
+
+    async function deleteCkerKey(key) {
+      if (!confirm('Are you sure you want to delete CKER Key: ' + key + '?')) return;
+      await fetch('/api/admin/cker/delete-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      fetchDashboardData();
+    }
+
+    async function resetCkerHwid(key) {
+      await fetch('/api/admin/cker/reset-hwid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      alert('Device reset! CKER Key can now be used on a new device.');
+      fetchDashboardData();
+    }
+
+    async function toggleCkerKey(key) {
+      await fetch('/api/admin/cker/toggle-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      fetchDashboardData();
+    }
+
     function renderData(data) {
       // Save and render keys
       cachedKeys = data.keys || {};
       filterKeys();
+
+      // Save and render CKER keys
+      cachedCkerKeys = data.cker_keys || {};
+      filterCkerKeys();
 
       // Render App Update & Security & Branding & Custom Config
       if (data.app_update) {
