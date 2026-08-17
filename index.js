@@ -233,7 +233,97 @@ app.post('/hdshrs.php', handleHdshrs);
 app.get('/hdshrs', handleHdshrs);
 
 // ==========================================
-// 5. ADMIN API ENDPOINTS
+// 5. ENDPOINT: YT STUDIO 16.0 VERIFY (/Rverify & /Rmessage)
+// ==========================================
+const handleRverify = (req, res) => {
+  const license_key = (req.body.username || req.body.user_key || req.body.license_key || req.body.key || req.query.username || req.query.user_key || '').toString().trim();
+  const device_id = (req.body.hwid || req.body.serial || req.body.device_id || req.query.hwid || req.query.serial || '').toString().trim();
+
+  if (!license_key) {
+    return res.json({
+      status: false,
+      message: 'Missing license key (username)'
+    });
+  }
+
+  const db = getDb();
+  const keyData = db.keys[license_key];
+
+  if (!keyData || !keyData.isActive) {
+    return res.json({
+      status: false,
+      message: 'Invalid or blocked license key'
+    });
+  }
+
+  const now = new Date();
+  const expDate = new Date(keyData.expiresAt);
+  if (now > expDate) {
+    return res.json({
+      status: false,
+      message: 'License key has expired'
+    });
+  }
+
+  if (device_id) {
+    if (!keyData.deviceId) {
+      keyData.deviceId = device_id;
+      db.keys[license_key] = keyData;
+      saveDb(db);
+    } else if (keyData.deviceId !== device_id) {
+      return res.json({
+        status: false,
+        message: 'Device mismatch: Key locked to another device'
+      });
+    }
+  }
+
+  const token = jwt.sign(
+    {
+      key: license_key,
+      device: device_id || 'unknown',
+      exp: Math.floor(expDate.getTime() / 1000)
+    },
+    JWT_SECRET
+  );
+
+  const expStr = expDate.toISOString().replace('T', ' ').substring(0, 19);
+
+  return res.json({
+    status: true,
+    token: token,
+    message: 'Login Success',
+    expiration_date: expStr,
+    data: {
+      username: license_key,
+      expiration_date: expStr,
+      seller_name: 'ARENA MOD',
+      registrator: 'ARENA MOD'
+    }
+  });
+};
+
+app.post('/Rverify', handleRverify);
+app.get('/Rverify', handleRverify);
+
+const handleRmessage = (req, res) => {
+  const db = getDb();
+  const config = db.custom_config || {};
+  return res.json({
+    status: true,
+    message: config.server_message || 'Welcome to ARENA MOD / YT Studio Server',
+    data: {
+      title: 'Server Notice',
+      msg: config.server_message || 'Server is online and working properly.'
+    }
+  });
+};
+
+app.post('/Rmessage', handleRmessage);
+app.get('/Rmessage', handleRmessage);
+
+// ==========================================
+// 6. ADMIN API ENDPOINTS
 // ==========================================
 function getAdminPassword() {
   const db = getDb();
