@@ -24,5 +24,10 @@
     "version": "1.0.0",
     "author": "@hawali7",
     "telegram": "https://t.me/angrymodofficials"
+  },
+  "custom_config": {
+    "status": "active",
+    "server_message": "Server is running smoothly",
+    "maintenance": false
   }
 }

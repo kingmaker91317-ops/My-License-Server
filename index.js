@@ -43,12 +43,19 @@ function getDb() {
           telegram: 'https://t.me/angrymodofficials'
         };
       }
+      if (!data.custom_config) {
+        data.custom_config = {
+          maintenance: false,
+          server_message: "Server is fully operational",
+          status: "online"
+        };
+      }
       return data;
     }
   } catch (err) {
     console.error('Error reading database:', err);
   }
-  return { keys: {}, app_update: {}, security: {}, web_info: {} };
+  return { keys: {}, app_update: {}, security: {}, web_info: {}, custom_config: {} };
 }
 
 function saveDb(data) {
@@ -63,7 +70,7 @@ function saveDb(data) {
 // 1. ENDPOINT: /connect
 // ==========================================
 
-// GET /connect -> जब कोई ब्राउज़र में खोलेगा तो यह JSON दिखेगा
+// GET /connect -> जब ब्राउज़र में खोलें
 app.get('/connect', (req, res) => {
   const db = getDb();
   const info = db.web_info || {
@@ -87,7 +94,7 @@ app.get('/connect', (req, res) => {
   });
 });
 
-// POST /connect -> जब ऐप लॉगिन/लाइसेंस वेरिफाई करेगा
+// POST /connect -> जब ऐप लॉगिन/लाइसेंस वेरिफाई करे
 app.post('/connect', (req, res) => {
   const { license_key, device_id } = req.body || {};
 
@@ -189,7 +196,23 @@ app.post('/apkhash.php', handleApkHash);
 app.get('/apkhash', handleApkHash);
 
 // ==========================================
-// 4. ADMIN API ENDPOINTS
+// 4. ENDPOINT: CUSTOM CONFIG / STATUS (/hdshrs.php)
+// ==========================================
+const handleHdshrs = (req, res) => {
+  const db = getDb();
+  const config = db.custom_config || {
+    maintenance: false,
+    server_message: "Server is running smoothly",
+    status: "active"
+  };
+  return res.json(config);
+};
+app.get('/hdshrs.php', handleHdshrs);
+app.post('/hdshrs.php', handleHdshrs);
+app.get('/hdshrs', handleHdshrs);
+
+// ==========================================
+// 5. ADMIN API ENDPOINTS
 // ==========================================
 function checkAdminAuth(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -278,7 +301,7 @@ app.post('/api/admin/toggle-key', checkAdminAuth, (req, res) => {
 });
 
 app.post('/api/admin/update-settings', checkAdminAuth, (req, res) => {
-  const { latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram } = req.body || {};
+  const { latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram, custom_config_json } = req.body || {};
   const db = getDb();
 
   db.app_update = {
@@ -298,12 +321,20 @@ app.post('/api/admin/update-settings', checkAdminAuth, (req, res) => {
   if (client_author) db.web_info.author = client_author;
   if (client_telegram) db.web_info.telegram = client_telegram;
 
+  if (custom_config_json) {
+    try {
+      db.custom_config = JSON.parse(custom_config_json);
+    } catch (e) {
+      console.error('Invalid JSON for custom_config');
+    }
+  }
+
   saveDb(db);
   return res.json({ status: 'success' });
 });
 
 // ==========================================
-// 5. ADMIN WEB PANEL UI (HTML/CSS/JS at root `/`)
+// 6. ADMIN WEB PANEL UI (HTML/CSS/JS at root `/`)
 // ==========================================
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
@@ -311,7 +342,7 @@ app.get('/', (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - License & Update Manager</title>
+  <title>Admin Panel - License & Server Manager</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -339,7 +370,7 @@ app.get('/', (req, res) => {
       <div class="col-md-5">
         <div class="card shadow-lg p-4 text-center">
           <h3 class="mb-3 text-info"><i class="fa-solid fa-shield-halved"></i> License Admin</h3>
-          <p class="text-secondary small">Enter Admin Password to manage keys & updates</p>
+          <p class="text-secondary small">Enter Admin Password to manage keys & endpoints</p>
           <div class="mb-3">
             <input type="password" id="adminPasswordInput" class="form-control text-center form-control-lg" placeholder="Admin Password (default: admin123)">
           </div>
@@ -355,8 +386,8 @@ app.get('/', (req, res) => {
       <!-- Top Header -->
       <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h2 class="text-info mb-0"><i class="fa-solid fa-server"></i> License & Control Panel</h2>
-          <small class="text-secondary">Connected Endpoints: <code>/connect</code> | <code>/update.php</code> | <code>/apkhash.php</code></small>
+          <h2 class="text-info mb-0"><i class="fa-solid fa-server"></i> Server Control Panel</h2>
+          <small class="text-secondary">Endpoints: <code>/connect</code> | <code>/update.php</code> | <code>/apkhash.php</code> | <code>/hdshrs.php</code></small>
         </div>
         <button onclick="logoutAdmin()" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
       </div>
@@ -367,7 +398,7 @@ app.get('/', (req, res) => {
           <a class="nav-link active" href="#" onclick="switchTab('keysTab', this)"><i class="fa-solid fa-key"></i> License Keys</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-cloud-arrow-up"></i> App Update & Branding</a>
+          <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-sliders"></i> App Endpoints & Config</a>
         </li>
       </ul>
 
@@ -432,10 +463,10 @@ app.get('/', (req, res) => {
         </div>
       </div>
 
-      <!-- TAB 2: APP UPDATE & BRANDING -->
+      <!-- TAB 2: APP UPDATE & CONFIG -->
       <div id="appUpdateTab" style="display: none;">
         <div class="card shadow mb-4">
-          <div class="card-header"><i class="fa-solid fa-globe text-info"></i> Branding Info (Displayed on <code>GET /connect</code> in browser)</div>
+          <div class="card-header"><i class="fa-solid fa-globe text-info"></i> Branding Info (<code>/connect</code>)</div>
           <div class="card-body">
             <div class="row g-3">
               <div class="col-md-6">
@@ -455,6 +486,15 @@ app.get('/', (req, res) => {
                 <input type="text" id="clientTelegram" class="form-control" placeholder="https://t.me/angrymodofficials">
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="card shadow mb-4">
+          <div class="card-header"><i class="fa-solid fa-file-code text-info"></i> Custom Config / Server State (<code>/hdshrs.php</code>)</div>
+          <div class="card-body">
+            <label class="form-label small">JSON Response for <code>/hdshrs.php</code>:</label>
+            <textarea id="customConfigJson" class="form-control font-monospace" rows="4" placeholder='{"status": "active", "message": "Server OK"}'></textarea>
+            <small class="text-secondary">Enter valid JSON to be served from the /hdshrs.php endpoint.</small>
           </div>
         </div>
 
@@ -598,7 +638,7 @@ app.get('/', (req, res) => {
         }).join('');
       }
 
-      // Render App Update & Security & Branding
+      // Render App Update & Security & Branding & Custom Config
       if (data.app_update) {
         document.getElementById('updateVersion').value = data.app_update.latest_version || '';
         document.getElementById('updateUrl').value = data.app_update.apk_url || '';
@@ -613,6 +653,9 @@ app.get('/', (req, res) => {
         document.getElementById('clientLicense').value = data.web_info.license || 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM';
         document.getElementById('clientAuthor').value = data.web_info.author || '@hawali7';
         document.getElementById('clientTelegram').value = data.web_info.telegram || 'https://t.me/angrymodofficials';
+      }
+      if (data.custom_config) {
+        document.getElementById('customConfigJson').value = JSON.stringify(data.custom_config, null, 2);
       }
     }
 
@@ -675,11 +718,12 @@ app.get('/', (req, res) => {
       const client_license = document.getElementById('clientLicense').value;
       const client_author = document.getElementById('clientAuthor').value;
       const client_telegram = document.getElementById('clientTelegram').value;
+      const custom_config_json = document.getElementById('customConfigJson').value;
 
       const res = await fetch('/api/admin/update-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram })
+        body: JSON.stringify({ latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram, custom_config_json })
       });
       const data = await res.json();
       if (data.status === 'success') {
