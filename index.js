@@ -34,12 +34,21 @@ function getDb() {
       if (!data.security) {
         data.security = { apk_hash: 'DEFAULT_HASH' };
       }
+      if (!data.web_info) {
+        data.web_info = {
+          client: 'ANGRY MOD',
+          license: 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM',
+          version: '1.0.0',
+          author: '@hawali7',
+          telegram: 'https://t.me/angrymodofficials'
+        };
+      }
       return data;
     }
   } catch (err) {
     console.error('Error reading database:', err);
   }
-  return { keys: {}, app_update: {}, security: {} };
+  return { keys: {}, app_update: {}, security: {}, web_info: {} };
 }
 
 function saveDb(data) {
@@ -51,8 +60,34 @@ function saveDb(data) {
 }
 
 // ==========================================
-// 1. ENDPOINT: LOGIN & LICENSE AUTH (/connect)
+// 1. ENDPOINT: /connect
 // ==========================================
+
+// GET /connect -> जब कोई ब्राउज़र में खोलेगा तो यह JSON दिखेगा
+app.get('/connect', (req, res) => {
+  const db = getDb();
+  const info = db.web_info || {
+    client: 'ANGRY MOD',
+    license: 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM',
+    version: '1.0.0',
+    author: '@hawali7',
+    telegram: 'https://t.me/angrymodofficials'
+  };
+
+  return res.json({
+    web_info: {
+      _client: info.client,
+      license: info.license,
+      version: info.version
+    },
+    web_dev: {
+      author: info.author,
+      telegram: info.telegram
+    }
+  });
+});
+
+// POST /connect -> जब ऐप लॉगिन/लाइसेंस वेरिफाई करेगा
 app.post('/connect', (req, res) => {
   const { license_key, device_id } = req.body || {};
 
@@ -243,7 +278,7 @@ app.post('/api/admin/toggle-key', checkAdminAuth, (req, res) => {
 });
 
 app.post('/api/admin/update-settings', checkAdminAuth, (req, res) => {
-  const { latest_version, apk_url, force_update, changelog, apk_hash } = req.body || {};
+  const { latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram } = req.body || {};
   const db = getDb();
 
   db.app_update = {
@@ -256,6 +291,12 @@ app.post('/api/admin/update-settings', checkAdminAuth, (req, res) => {
   if (apk_hash !== undefined) {
     db.security.apk_hash = apk_hash;
   }
+
+  if (!db.web_info) db.web_info = {};
+  if (client_name) db.web_info.client = client_name;
+  if (client_license) db.web_info.license = client_license;
+  if (client_author) db.web_info.author = client_author;
+  if (client_telegram) db.web_info.telegram = client_telegram;
 
   saveDb(db);
   return res.json({ status: 'success' });
@@ -326,7 +367,7 @@ app.get('/', (req, res) => {
           <a class="nav-link active" href="#" onclick="switchTab('keysTab', this)"><i class="fa-solid fa-key"></i> License Keys</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-cloud-arrow-up"></i> App Update & Security</a>
+          <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-cloud-arrow-up"></i> App Update & Branding</a>
         </li>
       </ul>
 
@@ -391,8 +432,32 @@ app.get('/', (req, res) => {
         </div>
       </div>
 
-      <!-- TAB 2: APP UPDATE & SECURITY -->
+      <!-- TAB 2: APP UPDATE & BRANDING -->
       <div id="appUpdateTab" style="display: none;">
+        <div class="card shadow mb-4">
+          <div class="card-header"><i class="fa-solid fa-globe text-info"></i> Branding Info (Displayed on <code>GET /connect</code> in browser)</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small">Client Name:</label>
+                <input type="text" id="clientName" class="form-control" placeholder="ANGRY MOD">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">License String:</label>
+                <input type="text" id="clientLicense" class="form-control" placeholder="Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">Author:</label>
+                <input type="text" id="clientAuthor" class="form-control" placeholder="@hawali7">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">Telegram Link:</label>
+                <input type="text" id="clientTelegram" class="form-control" placeholder="https://t.me/angrymodofficials">
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card shadow mb-4">
           <div class="card-header"><i class="fa-solid fa-cloud-arrow-down text-info"></i> App Update Configuration (<code>/update.php</code>)</div>
           <div class="card-body">
@@ -425,7 +490,6 @@ app.get('/', (req, res) => {
             <div class="mb-3">
               <label class="form-label small">Expected Original APK SHA256 / Hash:</label>
               <input type="text" id="apkHash" class="form-control" placeholder="e.g. e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855">
-              <div class="text-secondary small mt-1">If client sends a different hash, server returns <code>403 Tampered</code>.</div>
             </div>
             <button onclick="saveSettings()" class="btn btn-success fw-bold"><i class="fa-solid fa-floppy-disk"></i> Save All Settings</button>
           </div>
@@ -534,7 +598,7 @@ app.get('/', (req, res) => {
         }).join('');
       }
 
-      // Render App Update & Security
+      // Render App Update & Security & Branding
       if (data.app_update) {
         document.getElementById('updateVersion').value = data.app_update.latest_version || '';
         document.getElementById('updateUrl').value = data.app_update.apk_url || '';
@@ -543,6 +607,12 @@ app.get('/', (req, res) => {
       }
       if (data.security) {
         document.getElementById('apkHash').value = data.security.apk_hash || '';
+      }
+      if (data.web_info) {
+        document.getElementById('clientName').value = data.web_info.client || 'ANGRY MOD';
+        document.getElementById('clientLicense').value = data.web_info.license || 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM';
+        document.getElementById('clientAuthor').value = data.web_info.author || '@hawali7';
+        document.getElementById('clientTelegram').value = data.web_info.telegram || 'https://t.me/angrymodofficials';
       }
     }
 
@@ -601,11 +671,15 @@ app.get('/', (req, res) => {
       const force_update = document.getElementById('forceUpdateCheck').checked;
       const changelog = document.getElementById('updateChangelog').value;
       const apk_hash = document.getElementById('apkHash').value;
+      const client_name = document.getElementById('clientName').value;
+      const client_license = document.getElementById('clientLicense').value;
+      const client_author = document.getElementById('clientAuthor').value;
+      const client_telegram = document.getElementById('clientTelegram').value;
 
       const res = await fetch('/api/admin/update-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ latest_version, apk_url, force_update, changelog, apk_hash })
+        body: JSON.stringify({ latest_version, apk_url, force_update, changelog, apk_hash, client_name, client_license, client_author, client_telegram })
       });
       const data = await res.json();
       if (data.status === 'success') {

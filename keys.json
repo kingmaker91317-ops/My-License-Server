@@ -6,7 +6,7 @@
       "isActive": true,
       "durationDays": 30,
       "createdAt": "2026-08-18T00:00:00.000Z",
-      "note": "Default Admin VIP Key"
+      "note": "Default VIP Key"
     }
   },
   "app_update": {
@@ -17,5 +17,12 @@
   },
   "security": {
     "apk_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "web_info": {
+    "client": "ANGRY MOD",
+    "license": "Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM",
+    "version": "1.0.0",
+    "author": "@hawali7",
+    "telegram": "https://t.me/angrymodofficials"
   }
 }
