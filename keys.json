@@ -1,14 +1,21 @@
 {
-  "VIP-KEY-001": {
-    "deviceId": null,
-    "expiresAt": "2026-12-31T23:59:59.000Z",
-    "isActive": true,
-    "note": "30-day VIP key (auto-binds to first device)"
+  "keys": {
+    "VIP-KEY-001": {
+      "deviceId": null,
+      "expiresAt": "2026-12-31T23:59:59.000Z",
+      "isActive": true,
+      "durationDays": 30,
+      "createdAt": "2026-08-18T00:00:00.000Z",
+      "note": "Default Admin VIP Key"
+    }
   },
-  "TEST-KEY-002": {
-    "deviceId": null,
-    "expiresAt": "2026-09-01T00:00:00.000Z",
-    "isActive": true,
-    "note": "Test key"
+  "app_update": {
+    "latest_version": "1.0.0",
+    "apk_url": "https://example.com/app-release.apk",
+    "force_update": false,
+    "changelog": "Initial Release - Stability improvements"
+  },
+  "security": {
+    "apk_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   }
 }
