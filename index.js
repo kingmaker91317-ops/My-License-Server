@@ -36,7 +36,7 @@ function getDb() {
       }
       if (!data.web_info) {
         data.web_info = {
-          client: 'ANGRY MOD',
+          client: 'ARENA MOD',
           license: 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM',
           version: '1.0.0',
           author: '@hawali7',
@@ -159,8 +159,8 @@ app.post('/connect', (req, res) => {
     data: {
       user_key: license_key,
       expired_date: expStr,
-      seller_name: "ANGRY MOD",
-      registrator: "ANGRY MOD"
+      seller_name: "ARENA MOD",
+      registrator: "ARENA MOD"
     },
     reason: 'Login Success',
     exp: expStr,
