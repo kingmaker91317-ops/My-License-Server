@@ -96,12 +96,14 @@ app.get('/connect', (req, res) => {
 
 // POST /connect -> जब ऐप लॉगिन/लाइसेंस वेरिफाई करे
 app.post('/connect', (req, res) => {
-  const { license_key, device_id } = req.body || {};
+  // Support both standard names and Android app parameters (user_key, serial)
+  const license_key = (req.body.user_key || req.body.license_key || req.body.key || req.query.user_key || req.query.license_key || '').toString().trim();
+  const device_id = (req.body.serial || req.body.device_id || req.body.hwid || req.query.serial || req.query.device_id || '').toString().trim();
 
   if (!license_key || !device_id) {
     return res.status(400).json({
       status: 'failed',
-      reason: 'Missing license_key or device_id'
+      reason: 'Missing license key (user_key) or device serial'
     });
   }
 
