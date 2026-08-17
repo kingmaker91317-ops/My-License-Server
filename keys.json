@@ -1,0 +1,14 @@
+{
+  "VIP-KEY-001": {
+    "deviceId": null,
+    "expiresAt": "2026-12-31T23:59:59.000Z",
+    "isActive": true,
+    "note": "30-day VIP key (auto-binds to first device)"
+  },
+  "TEST-KEY-002": {
+    "deviceId": null,
+    "expiresAt": "2026-09-01T00:00:00.000Z",
+    "isActive": true,
+    "note": "Test key"
+  }
+}
