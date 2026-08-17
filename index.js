@@ -101,9 +101,10 @@ app.post('/connect', (req, res) => {
   const device_id = (req.body.serial || req.body.device_id || req.body.hwid || req.query.serial || req.query.device_id || '').toString().trim();
 
   if (!license_key || !device_id) {
-    return res.status(400).json({
-      status: 'failed',
-      reason: 'Missing license key (user_key) or device serial'
+    return res.status(200).json({
+      status: false,
+      crash: false,
+      reason: 'Missing license key or device serial'
     });
   }
 
@@ -111,8 +112,9 @@ app.post('/connect', (req, res) => {
   const keyData = db.keys[license_key];
 
   if (!keyData || !keyData.isActive) {
-    return res.status(401).json({
-      status: 'failed',
+    return res.status(200).json({
+      status: false,
+      crash: false,
       reason: 'Invalid or blocked license key'
     });
   }
@@ -120,8 +122,9 @@ app.post('/connect', (req, res) => {
   const now = new Date();
   const expDate = new Date(keyData.expiresAt);
   if (now > expDate) {
-    return res.status(403).json({
-      status: 'failed',
+    return res.status(200).json({
+      status: false,
+      crash: false,
       reason: 'License key has expired'
     });
   }
@@ -131,8 +134,9 @@ app.post('/connect', (req, res) => {
     db.keys[license_key] = keyData;
     saveDb(db);
   } else if (keyData.deviceId !== device_id) {
-    return res.status(403).json({
-      status: 'failed',
+    return res.status(200).json({
+      status: false,
+      crash: false,
       reason: 'Device mismatch: Key is locked to another device'
     });
   }
@@ -146,10 +150,20 @@ app.post('/connect', (req, res) => {
     JWT_SECRET
   );
 
+  // Format expiry date like YYYY-MM-DD HH:MM:SS
+  const expStr = expDate.toISOString().replace('T', ' ').substring(0, 19);
+
   return res.status(200).json({
-    status: 'success',
-    reason: 'Login successful',
-    exp: keyData.expiresAt,
+    status: true,
+    crash: false,
+    data: {
+      user_key: license_key,
+      expired_date: expStr,
+      seller_name: "ANGRY MOD",
+      registrator: "ANGRY MOD"
+    },
+    reason: 'Login Success',
+    exp: expStr,
     token: token
   });
 });
@@ -161,7 +175,7 @@ const handleUpdate = (req, res) => {
   const db = getDb();
   const updateInfo = db.app_update || {};
   return res.json({
-    status: 'success',
+    status: true,
     version: updateInfo.latest_version || '1.0.0',
     download_url: updateInfo.apk_url || '',
     force_update: !!updateInfo.force_update,
@@ -182,14 +196,14 @@ const handleApkHash = (req, res) => {
 
   if (clientHash) {
     if (clientHash.trim().toLowerCase() === serverHash.trim().toLowerCase()) {
-      return res.json({ status: 'valid', reason: 'APK integrity verified' });
+      return res.json({ status: true, reason: 'APK integrity verified' });
     } else {
-      return res.status(403).json({ status: 'invalid', reason: 'APK integrity check failed (Tampered)' });
+      return res.status(200).json({ status: false, reason: 'APK integrity check failed (Tampered)' });
     }
   }
 
   return res.json({
-    status: 'success',
+    status: true,
     server_hash: serverHash
   });
 };
@@ -205,9 +219,13 @@ const handleHdshrs = (req, res) => {
   const config = db.custom_config || {
     maintenance: false,
     server_message: "Server is running smoothly",
-    status: "active"
+    status: true
   };
-  return res.json(config);
+  return res.json({
+    status: true,
+    maintenance: false,
+    server_message: config.server_message || "Server is running smoothly"
+  });
 };
 app.get('/hdshrs.php', handleHdshrs);
 app.post('/hdshrs.php', handleHdshrs);
