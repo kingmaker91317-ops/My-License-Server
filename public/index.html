@@ -721,30 +721,23 @@
     }
 
     async function createCkerKey() {
-      const days = document.getElementById('newCkerDays').value;
-      const hours = document.getElementById('newCkerHours').value;
-      const username = document.getElementById('newCkerUser').value;
-      const password = document.getElementById('newCkerPass').value;
-      const prefix = document.getElementById('newCkerPrefix').value;
-      const seller = document.getElementById('newCkerSeller').value;
-      const note = document.getElementById('newCkerNote').value;
+      const days = document.getElementById('newCkerDays')?.value || 30;
+      const hours = document.getElementById('newCkerHours')?.value || 0;
+      const prefix = document.getElementById('newCkerPrefix')?.value || 'PROXY';
+      const note = document.getElementById('newCkerNote')?.value || '';
 
-      const res = await fetch('/api/admin/cker/create-key', {
+      const res = await fetch('/api/admin/proxy/create-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ durationDays: days, durationHours: hours, username, password, prefix, seller, note })
+        body: JSON.stringify({ durationDays: days, durationHours: hours, prefix, note })
       });
       const data = await res.json();
       if (data.status === 'success') {
-        const u = data.data.username || data.key;
-        const p = data.data.password || '';
-        alert('नया CKER अकाउंट सफलतापूर्वक बन गया है!\n\nUsername: ' + u + '\nPassword: ' + p);
-        document.getElementById('newCkerUser').value = '';
-        document.getElementById('newCkerPass').value = '';
-        document.getElementById('newCkerNote').value = '';
+        alert('नया PROXY Key सफलतापूर्वक बन गया है!\n\nKey: ' + data.key);
+        if (document.getElementById('newCkerNote')) document.getElementById('newCkerNote').value = '';
         fetchDashboardData();
       } else {
-        alert('Error: ' + data.reason);
+        alert('Error: ' + (data.reason || 'Failed to generate key'));
       }
     }
 
