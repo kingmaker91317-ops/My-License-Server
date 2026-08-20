@@ -386,81 +386,32 @@ app.post('/api/admin/update-settings', checkAdminAuth, (req, res) => {
 });
 
 // ==========================================
-// 6. CKER APP ENDPOINTS (/Rverify & /Rmessage)
+// 6. PRIME PROXY MENU ENDPOINTS (/mod/loginBrutal)
 // ==========================================
 
-const handleRverify = (req, res) => {
-  const username = (req.body?.username || req.body?.user || req.query?.username || req.query?.user || '').toString().trim();
-  const password = (req.body?.password || req.body?.pass || req.body?.key || req.query?.password || req.query?.key || '').toString().trim();
-  const hwid = (req.body?.hwid || req.body?.serial || req.body?.uuid || req.body?.deviceId || req.query?.hwid || '').toString().trim();
-  const game = (req.body?.game || req.query?.game || 'Free Fire').toString().trim();
-  const version = (req.body?.version || req.query?.version || '16.0').toString().trim();
+const handleLoginBrutal = (req, res) => {
+  const license_key = (req.body?.User_hk || req.body?.user_key || req.body?.license_key || req.body?.key || req.query?.User_hk || req.query?.user_key || '').toString().trim();
+  const device_id = (req.body?.Dados_hk || req.body?.device_id || req.body?.hwid || req.body?.serial || req.query?.Dados_hk || req.query?.device_id || '').toString().trim();
+  const vendor = (req.body?.VENDEDOR || req.query?.VENDEDOR || 'ARENA MOD').toString().trim();
 
-  if (!username && !password) {
+  if (!license_key) {
     return res.status(200).json({
-      status: false,
+      status: 'failed',
       code: 400,
-      message: 'Missing Username or Password',
-      error: 'Missing Username or Password'
+      message: 'Os dados de login estão errados!...',
+      reason: 'Missing License Key'
     });
   }
 
   const db = getDb();
-  let keyData = null;
-  let accountKey = '';
-  let isCkerDb = false;
-
-  // 1. Try to find by Username in cker_keys
-  if (db.cker_keys) {
-    if (username && db.cker_keys[username]) {
-      keyData = db.cker_keys[username];
-      accountKey = username;
-      isCkerDb = true;
-    } else {
-      // Search all cker_keys for matching username or key
-      for (const [k, v] of Object.entries(db.cker_keys)) {
-        if (username && (k.toLowerCase() === username.toLowerCase() || (v.username && v.username.toLowerCase() === username.toLowerCase()))) {
-          keyData = v;
-          accountKey = k;
-          isCkerDb = true;
-          break;
-        }
-      }
-    }
-  }
-
-  // 2. If found in cker_keys, verify password if password was set
-  if (keyData && isCkerDb) {
-    if (keyData.password && password && keyData.password !== password) {
-      return res.status(200).json({
-        status: false,
-        code: 401,
-        message: 'Incorrect Password (गलत पासवर्ड)',
-        error: 'Incorrect Password'
-      });
-    }
-  }
-
-  // 3. Fallback: Check if password was entered as a single key in cker_keys or keys
-  if (!keyData) {
-    const singleKey = password || username;
-    if (db.cker_keys && db.cker_keys[singleKey]) {
-      keyData = db.cker_keys[singleKey];
-      accountKey = singleKey;
-      isCkerDb = true;
-    } else if (db.keys && db.keys[singleKey]) {
-      keyData = db.keys[singleKey];
-      accountKey = singleKey;
-      isCkerDb = false;
-    }
-  }
+  let keyData = db.keys[license_key] || (db.cker_keys && db.cker_keys[license_key]);
 
   if (!keyData || !keyData.isActive) {
     return res.status(200).json({
-      status: false,
+      status: 'failed',
       code: 401,
-      message: 'Invalid or Blocked Account / Key',
-      error: 'Invalid or Blocked Account / Key'
+      message: 'Os dados de login estão errados!...',
+      reason: 'Invalid or Blocked License Key'
     });
   }
 
@@ -468,28 +419,25 @@ const handleRverify = (req, res) => {
   const expDate = new Date(keyData.expiresAt);
   if (now > expDate) {
     return res.status(200).json({
-      status: false,
+      status: 'failed',
       code: 403,
-      message: 'Account Expired (अकाउंट समाप्त हो गया है)',
-      error: 'Account Expired'
+      message: 'Chave expirada!...',
+      reason: 'License key has expired'
     });
   }
 
-  if (hwid) {
+  if (device_id) {
     if (!keyData.deviceId) {
-      keyData.deviceId = hwid;
-      if (isCkerDb) {
-        db.cker_keys[accountKey] = keyData;
-      } else {
-        db.keys[accountKey] = keyData;
-      }
+      keyData.deviceId = device_id;
+      if (db.keys[license_key]) db.keys[license_key] = keyData;
+      if (db.cker_keys && db.cker_keys[license_key]) db.cker_keys[license_key] = keyData;
       saveDb(db);
-    } else if (keyData.deviceId !== hwid) {
+    } else if (keyData.deviceId !== device_id) {
       return res.status(200).json({
-        status: false,
+        status: 'failed',
         code: 409,
-        message: 'HWID Mismatch: Account is locked to another device',
-        error: 'HWID Mismatch: Account is locked to another device'
+        message: 'Dispositivo diferente!...',
+        reason: 'Device mismatch: Key is locked to another device'
       });
     }
   }
@@ -497,68 +445,39 @@ const handleRverify = (req, res) => {
   const expStr = expDate.toISOString().replace('T', ' ').substring(0, 19);
   const token = jwt.sign(
     {
-      user: username || accountKey,
-      hwid: hwid,
+      key: license_key,
+      device: device_id,
       exp: Math.floor(expDate.getTime() / 1000)
     },
     JWT_SECRET
   );
 
   return res.status(200).json({
-    status: true,
+    status: 'HasBeenSucceeded',
     code: 200,
-    message: 'Login Success',
-    reason: 'Login Success',
+    message: 'Conectado, Bem-vindo - divirta-se!',
+    reason: 'HasBeenSucceeded',
     token: token,
     exp: expStr,
-    seller_name: keyData.seller || 'HAXX-CKER TEAM',
-    keyCrypto: crypto.createHash('md5').update((username || accountKey) + JWT_SECRET).digest('hex'),
-    keyCryptox: crypto.createHash('sha256').update((username || accountKey) + expStr).digest('hex'),
-    messageCrypto: crypto.createHash('md5').update('SUCCESS_' + (username || accountKey)).digest('hex'),
-    messagemd5: crypto.createHash('md5').update(token).digest('hex'),
+    expired_date: expStr,
+    seller_name: vendor || 'ARENA MOD',
     data: {
-      user: username || accountKey,
-      user_key: username || accountKey,
-      game: game,
-      version: version,
+      user_key: license_key,
       expired_date: expStr,
-      seller_name: keyData.seller || 'HAXX-CKER TEAM'
+      seller_name: vendor || 'ARENA MOD'
     }
   });
 };
 
-app.post('/Rverify', handleRverify);
-app.get('/Rverify', handleRverify);
-app.post('/rverify', handleRverify);
-app.get('/rverify', handleRverify);
+app.post('/mod/loginBrutal', handleLoginBrutal);
+app.get('/mod/loginBrutal', handleLoginBrutal);
+app.post('/loginBrutal', handleLoginBrutal);
+app.get('/loginBrutal', handleLoginBrutal);
 
-const handleRmessage = (req, res) => {
+// Proxy Menu Admin APIs
+app.post('/api/admin/proxy/create-key', checkAdminAuth, (req, res) => {
+  const { prefix, durationDays, durationHours, note } = req.body || {};
   const db = getDb();
-  const msg = (db.custom_config && db.custom_config.server_message) || 'Welcome to HAXX-CKER Pro';
-  return res.status(200).json({
-    status: true,
-    code: 200,
-    title: 'HAXX-CKER',
-    desc: msg,
-    message: msg,
-    data: {
-      title: 'HAXX-CKER',
-      message: msg,
-      status: 'online'
-    }
-  });
-};
-
-app.post('/Rmessage', handleRmessage);
-app.get('/Rmessage', handleRmessage);
-app.post('/rmessage', handleRmessage);
-app.get('/rmessage', handleRmessage);
-
-// CKER Admin APIs
-app.post('/api/admin/cker/create-key', checkAdminAuth, (req, res) => {
-  const { username, password, prefix, durationDays, durationHours, note, seller } = req.body || {};
-  const db = getDb();
-  if (!db.cker_keys) db.cker_keys = {};
 
   const days = parseInt(durationDays) || 0;
   const hours = parseInt(durationHours) || 0;
@@ -568,64 +487,24 @@ app.post('/api/admin/cker/create-key', checkAdminAuth, (req, res) => {
     return res.status(400).json({ status: 'failed', reason: 'Duration must be greater than 0' });
   }
 
-  const randomUser = crypto.randomBytes(3).toString('hex').toUpperCase();
-  const randomPass = crypto.randomBytes(3).toString('hex');
-
-  const finalUser = (username && username.trim()) 
-    ? username.trim() 
-    : (prefix && prefix.trim() ? `${prefix.trim().toUpperCase()}-${randomUser}` : `CKER-${randomUser}`);
-
-  const finalPass = (password && password.trim()) ? password.trim() : `pass${randomPass}`;
+  const randomStr = crypto.randomBytes(4).toString('hex').toUpperCase();
+  const keyName = (prefix && prefix.trim()) 
+    ? `${prefix.trim().toUpperCase()}-${randomStr}` 
+    : `PROXY-${randomStr}`;
 
   const expiresAt = new Date(Date.now() + totalMs).toISOString();
 
-  db.cker_keys[finalUser] = {
-    username: finalUser,
-    password: finalPass,
+  db.keys[keyName] = {
     deviceId: null,
     expiresAt: expiresAt,
     isActive: true,
     durationDays: days + (hours / 24),
     createdAt: new Date().toISOString(),
-    note: note || '',
-    seller: seller || 'HAXX-CKER TEAM'
+    note: note || ''
   };
 
   saveDb(db);
-  return res.json({ status: 'success', key: finalUser, data: db.cker_keys[finalUser] });
-});
-
-app.post('/api/admin/cker/delete-key', checkAdminAuth, (req, res) => {
-  const { key } = req.body || {};
-  const db = getDb();
-  if (db.cker_keys && db.cker_keys[key]) {
-    delete db.cker_keys[key];
-    saveDb(db);
-    return res.json({ status: 'success' });
-  }
-  return res.status(404).json({ status: 'failed', reason: 'CKER Key not found' });
-});
-
-app.post('/api/admin/cker/reset-hwid', checkAdminAuth, (req, res) => {
-  const { key } = req.body || {};
-  const db = getDb();
-  if (db.cker_keys && db.cker_keys[key]) {
-    db.cker_keys[key].deviceId = null;
-    saveDb(db);
-    return res.json({ status: 'success' });
-  }
-  return res.status(404).json({ status: 'failed', reason: 'CKER Key not found' });
-});
-
-app.post('/api/admin/cker/toggle-key', checkAdminAuth, (req, res) => {
-  const { key } = req.body || {};
-  const db = getDb();
-  if (db.cker_keys && db.cker_keys[key]) {
-    db.cker_keys[key].isActive = !db.cker_keys[key].isActive;
-    saveDb(db);
-    return res.json({ status: 'success', isActive: db.cker_keys[key].isActive });
-  }
-  return res.status(404).json({ status: 'failed', reason: 'CKER Key not found' });
+  return res.json({ status: 'success', key: keyName, data: db.keys[keyName] });
 });
 
 // ==========================================

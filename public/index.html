@@ -71,7 +71,7 @@
           <a class="nav-link active" href="#" onclick="switchTab('keysTab', this)"><i class="fa-solid fa-key"></i> License Keys</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-warning" href="#" onclick="switchTab('ckerTab', this)"><i class="fa-solid fa-crosshairs text-warning"></i> CKER Key Generator</a>
+          <a class="nav-link text-info" href="#" onclick="switchTab('ckerTab', this)"><i class="fa-solid fa-bolt text-info"></i> PRIME PROXY Keys</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-sliders"></i> App Endpoints & Config</a>
@@ -162,15 +162,15 @@
         </div>
       </div>
 
-      <!-- TAB: CKER KEY GENERATOR (YT Studio / HAXX-CKER) -->
+      <!-- TAB: PROXY MENU KEY GENERATOR (PRIME PROXY MENU) -->
       <div id="ckerTab" style="display: none;">
         <div class="row g-4">
           
-          <!-- CKER Key Generator Form -->
+          <!-- PROXY MENU Key Generator Form -->
           <div class="col-lg-4">
-            <div class="card shadow" style="border: 1px solid #eab308;">
-              <div class="card-header bg-dark text-warning d-flex align-items-center gap-2" style="border-bottom: 1px solid #eab308;">
-                <i class="fa-solid fa-user-shield"></i> <span>CKER Account Generator (YT Studio)</span>
+            <div class="card shadow" style="border: 1px solid #38bdf8;">
+              <div class="card-header bg-dark text-info d-flex align-items-center gap-2" style="border-bottom: 1px solid #38bdf8;">
+                <i class="fa-solid fa-bolt"></i> <span>PRIME PROXY MENU Key Generator</span>
               </div>
               <div class="card-body">
                 <div class="row mb-3">
@@ -184,36 +184,28 @@
                   </div>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label small">Username (यूजरनेम):</label>
-                  <input type="text" id="newCkerUser" class="form-control" placeholder="उदा. gamer123 (खाली छोड़ें तो ऑटो-जनरेट)">
+                  <label class="form-label small">Prefix (प्रीफिक्स):</label>
+                  <input type="text" id="newCkerPrefix" class="form-control" value="PROXY" placeholder="उदा. PROXY">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label small">Password (पासवर्ड / Key):</label>
-                  <input type="text" id="newCkerPass" class="form-control" placeholder="उदा. pass123 (खाली छोड़ें तो ऑटो-जनरेट)">
-                </div>
-                <div class="mb-3">
-                  <label class="form-label small">Prefix (अगर यूजरनेम खाली हो):</label>
-                  <input type="text" id="newCkerPrefix" class="form-control" value="CKER" placeholder="उदा. CKER">
-                </div>
-                <div class="mb-3">
-                  <label class="form-label small">Seller Name (ऐप पर दिखने वाला नाम):</label>
-                  <input type="text" id="newCkerSeller" class="form-control" value="HAXX-CKER TEAM" placeholder="HAXX-CKER TEAM">
+                  <label class="form-label small">Seller Name (विक्रेता का नाम):</label>
+                  <input type="text" id="newCkerSeller" class="form-control" value="ARENA MOD" placeholder="ARENA MOD">
                 </div>
                 <div class="mb-3">
                   <label class="form-label small">Note / Customer (ग्राहक का नाम / नोट):</label>
-                  <input type="text" id="newCkerNote" class="form-control" placeholder="उदा. Rahul Player">
+                  <input type="text" id="newCkerNote" class="form-control" placeholder="उदा. John Doe">
                 </div>
-                <button onclick="createCkerKey()" class="btn btn-warning w-100 fw-bold py-2 text-dark"><i class="fa-solid fa-user-plus"></i> Generate User & Password</button>
+                <button onclick="createCkerKey()" class="btn btn-info w-100 fw-bold py-2 text-dark"><i class="fa-solid fa-key"></i> Generate Proxy Key</button>
               </div>
             </div>
           </div>
 
-          <!-- CKER Keys List Table -->
+          <!-- PROXY MENU Keys List Table -->
           <div class="col-lg-8">
-            <div class="card shadow" style="border: 1px solid #eab308;">
-              <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid #eab308;">
-                <span class="text-warning"><i class="fa-solid fa-users"></i> CKER Accounts (<span id="ckerKeyCount">0</span>) &mdash; <code>/Rverify</code></span>
-                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-rotate"></i> Refresh</button>
+            <div class="card shadow" style="border: 1px solid #38bdf8;">
+              <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid #38bdf8;">
+                <span class="text-info"><i class="fa-solid fa-key"></i> PRIME PROXY Keys (<span id="ckerKeyCount">0</span>) &mdash; <code>/mod/loginBrutal</code></span>
+                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-rotate"></i> Refresh</button>
               </div>
 
               <!-- SEARCH & FILTER TOOLBAR -->
