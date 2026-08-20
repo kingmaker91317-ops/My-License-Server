@@ -71,7 +71,7 @@
           <a class="nav-link active" href="#" onclick="switchTab('keysTab', this)"><i class="fa-solid fa-key"></i> License Keys</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-info" href="#" onclick="switchTab('ckerTab', this)"><i class="fa-solid fa-bolt text-info"></i> PRIME PROXY Keys</a>
+          <a class="nav-link text-warning" href="#" onclick="switchTab('ckerTab', this)"><i class="fa-solid fa-crosshairs text-warning"></i> CKER Key Generator</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-sliders"></i> App Endpoints & Config</a>
@@ -162,15 +162,15 @@
         </div>
       </div>
 
-      <!-- TAB: PROXY MENU KEY GENERATOR (PRIME PROXY MENU) -->
+      <!-- TAB: CKER KEY GENERATOR (YT Studio / HAXX-CKER) -->
       <div id="ckerTab" style="display: none;">
         <div class="row g-4">
           
-          <!-- PROXY MENU Key Generator Form -->
+          <!-- CKER Key Generator Form -->
           <div class="col-lg-4">
-            <div class="card shadow" style="border: 1px solid #38bdf8;">
-              <div class="card-header bg-dark text-info d-flex align-items-center gap-2" style="border-bottom: 1px solid #38bdf8;">
-                <i class="fa-solid fa-bolt"></i> <span>PRIME PROXY MENU Key Generator</span>
+            <div class="card shadow" style="border: 1px solid #eab308;">
+              <div class="card-header bg-dark text-warning d-flex align-items-center gap-2" style="border-bottom: 1px solid #eab308;">
+                <i class="fa-solid fa-user-shield"></i> <span>CKER Account Generator (YT Studio)</span>
               </div>
               <div class="card-body">
                 <div class="row mb-3">
@@ -184,28 +184,36 @@
                   </div>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label small">Prefix (प्रीफिक्स):</label>
-                  <input type="text" id="newCkerPrefix" class="form-control" value="PROXY" placeholder="उदा. PROXY">
+                  <label class="form-label small">Username (यूजरनेम):</label>
+                  <input type="text" id="newCkerUser" class="form-control" placeholder="उदा. gamer123 (खाली छोड़ें तो ऑटो-जनरेट)">
                 </div>
                 <div class="mb-3">
-                  <label class="form-label small">Seller Name (विक्रेता का नाम):</label>
-                  <input type="text" id="newCkerSeller" class="form-control" value="ARENA MOD" placeholder="ARENA MOD">
+                  <label class="form-label small">Password (पासवर्ड / Key):</label>
+                  <input type="text" id="newCkerPass" class="form-control" placeholder="उदा. pass123 (खाली छोड़ें तो ऑटो-जनरेट)">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Prefix (अगर यूजरनेम खाली हो):</label>
+                  <input type="text" id="newCkerPrefix" class="form-control" value="CKER" placeholder="उदा. CKER">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Seller Name (ऐप पर दिखने वाला नाम):</label>
+                  <input type="text" id="newCkerSeller" class="form-control" value="HAXX-CKER TEAM" placeholder="HAXX-CKER TEAM">
                 </div>
                 <div class="mb-3">
                   <label class="form-label small">Note / Customer (ग्राहक का नाम / नोट):</label>
-                  <input type="text" id="newCkerNote" class="form-control" placeholder="उदा. John Doe">
+                  <input type="text" id="newCkerNote" class="form-control" placeholder="उदा. Rahul Player">
                 </div>
-                <button onclick="createCkerKey()" class="btn btn-info w-100 fw-bold py-2 text-dark"><i class="fa-solid fa-key"></i> Generate Proxy Key</button>
+                <button onclick="createCkerKey()" class="btn btn-warning w-100 fw-bold py-2 text-dark"><i class="fa-solid fa-user-plus"></i> Generate User & Password</button>
               </div>
             </div>
           </div>
 
-          <!-- PROXY MENU Keys List Table -->
+          <!-- CKER Keys List Table -->
           <div class="col-lg-8">
-            <div class="card shadow" style="border: 1px solid #38bdf8;">
-              <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid #38bdf8;">
-                <span class="text-info"><i class="fa-solid fa-key"></i> PRIME PROXY Keys (<span id="ckerKeyCount">0</span>) &mdash; <code>/mod/loginBrutal</code></span>
-                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-rotate"></i> Refresh</button>
+            <div class="card shadow" style="border: 1px solid #eab308;">
+              <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid #eab308;">
+                <span class="text-warning"><i class="fa-solid fa-users"></i> CKER Accounts (<span id="ckerKeyCount">0</span>) &mdash; <code>/Rverify</code></span>
+                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-rotate"></i> Refresh</button>
               </div>
 
               <!-- SEARCH & FILTER TOOLBAR -->
@@ -721,29 +729,36 @@
     }
 
     async function createCkerKey() {
-      const days = document.getElementById('newCkerDays')?.value || 30;
-      const hours = document.getElementById('newCkerHours')?.value || 0;
-      const prefix = document.getElementById('newCkerPrefix')?.value || 'PROXY';
-      const note = document.getElementById('newCkerNote')?.value || '';
+      const days = document.getElementById('newCkerDays').value;
+      const hours = document.getElementById('newCkerHours').value;
+      const username = document.getElementById('newCkerUser').value;
+      const password = document.getElementById('newCkerPass').value;
+      const prefix = document.getElementById('newCkerPrefix').value;
+      const seller = document.getElementById('newCkerSeller').value;
+      const note = document.getElementById('newCkerNote').value;
 
-      const res = await fetch('/api/admin/proxy/create-key', {
+      const res = await fetch('/api/admin/cker/create-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ durationDays: days, durationHours: hours, prefix, note })
+        body: JSON.stringify({ durationDays: days, durationHours: hours, username, password, prefix, seller, note })
       });
       const data = await res.json();
       if (data.status === 'success') {
-        alert('नया PROXY Key सफलतापूर्वक बन गया है!\n\nKey: ' + data.key);
-        if (document.getElementById('newCkerNote')) document.getElementById('newCkerNote').value = '';
+        const u = data.data.username || data.key;
+        const p = data.data.password || '';
+        alert('नया CKER अकाउंट सफलतापूर्वक बन गया है!\n\nUsername: ' + u + '\nPassword: ' + p);
+        document.getElementById('newCkerUser').value = '';
+        document.getElementById('newCkerPass').value = '';
+        document.getElementById('newCkerNote').value = '';
         fetchDashboardData();
       } else {
-        alert('Error: ' + (data.reason || 'Failed to generate key'));
+        alert('Error: ' + data.reason);
       }
     }
 
     async function deleteCkerKey(key) {
-      if (!confirm('Are you sure you want to delete Proxy Key: ' + key + '?')) return;
-      await fetch('/api/admin/proxy/delete-key', {
+      if (!confirm('Are you sure you want to delete CKER Key: ' + key + '?')) return;
+      await fetch('/api/admin/cker/delete-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
         body: JSON.stringify({ key })
@@ -752,17 +767,17 @@
     }
 
     async function resetCkerHwid(key) {
-      await fetch('/api/admin/proxy/reset-hwid', {
+      await fetch('/api/admin/cker/reset-hwid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
         body: JSON.stringify({ key })
       });
-      alert('Device reset! Proxy Key can now be used on a new device.');
+      alert('Device reset! CKER Key can now be used on a new device.');
       fetchDashboardData();
     }
 
     async function toggleCkerKey(key) {
-      await fetch('/api/admin/proxy/toggle-key', {
+      await fetch('/api/admin/cker/toggle-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
         body: JSON.stringify({ key })
@@ -771,12 +786,12 @@
     }
 
     function renderData(data) {
-      // Save and render ARENA MOD keys
+      // Save and render keys
       cachedKeys = data.keys || {};
       filterKeys();
 
-      // Save and render PRIME PROXY keys
-      cachedCkerKeys = data.proxy_keys || data.cker_keys || {};
+      // Save and render CKER keys
+      cachedCkerKeys = data.cker_keys || {};
       filterCkerKeys();
 
       // Render App Update & Security & Branding & Custom Config
