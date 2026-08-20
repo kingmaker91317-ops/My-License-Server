@@ -23,7 +23,7 @@ function getDb() {
       const raw = fs.readFileSync(DB_FILE, 'utf8');
       const data = JSON.parse(raw);
       if (!data.keys) data.keys = {};
-      if (!data.cker_keys) data.cker_keys = {};
+      if (!data.proxy_keys) data.proxy_keys = data.cker_keys || {};
       if (!data.app_update) {
         data.app_update = {
           latest_version: '1.0.0',
@@ -404,7 +404,7 @@ const handleLoginBrutal = (req, res) => {
   }
 
   const db = getDb();
-  let keyData = db.keys[license_key] || (db.cker_keys && db.cker_keys[license_key]);
+  let keyData = (db.proxy_keys && db.proxy_keys[license_key]) || db.keys[license_key] || (db.cker_keys && db.cker_keys[license_key]);
 
   if (!keyData || !keyData.isActive) {
     return res.status(200).json({
@@ -429,8 +429,8 @@ const handleLoginBrutal = (req, res) => {
   if (device_id) {
     if (!keyData.deviceId) {
       keyData.deviceId = device_id;
-      if (db.keys[license_key]) db.keys[license_key] = keyData;
-      if (db.cker_keys && db.cker_keys[license_key]) db.cker_keys[license_key] = keyData;
+      if (db.proxy_keys && db.proxy_keys[license_key]) db.proxy_keys[license_key] = keyData;
+      else if (db.keys[license_key]) db.keys[license_key] = keyData;
       saveDb(db);
     } else if (keyData.deviceId !== device_id) {
       return res.status(200).json({
@@ -478,6 +478,7 @@ app.get('/loginBrutal', handleLoginBrutal);
 app.post('/api/admin/proxy/create-key', checkAdminAuth, (req, res) => {
   const { prefix, durationDays, durationHours, note } = req.body || {};
   const db = getDb();
+  if (!db.proxy_keys) db.proxy_keys = {};
 
   const days = parseInt(durationDays) || 0;
   const hours = parseInt(durationHours) || 0;
@@ -494,7 +495,7 @@ app.post('/api/admin/proxy/create-key', checkAdminAuth, (req, res) => {
 
   const expiresAt = new Date(Date.now() + totalMs).toISOString();
 
-  db.keys[keyName] = {
+  db.proxy_keys[keyName] = {
     deviceId: null,
     expiresAt: expiresAt,
     isActive: true,
@@ -504,7 +505,40 @@ app.post('/api/admin/proxy/create-key', checkAdminAuth, (req, res) => {
   };
 
   saveDb(db);
-  return res.json({ status: 'success', key: keyName, data: db.keys[keyName] });
+  return res.json({ status: 'success', key: keyName, data: db.proxy_keys[keyName] });
+});
+
+app.post('/api/admin/proxy/delete-key', checkAdminAuth, (req, res) => {
+  const { key } = req.body || {};
+  const db = getDb();
+  if (db.proxy_keys && db.proxy_keys[key]) {
+    delete db.proxy_keys[key];
+    saveDb(db);
+    return res.json({ status: 'success' });
+  }
+  return res.status(404).json({ status: 'failed', reason: 'Proxy Key not found' });
+});
+
+app.post('/api/admin/proxy/reset-hwid', checkAdminAuth, (req, res) => {
+  const { key } = req.body || {};
+  const db = getDb();
+  if (db.proxy_keys && db.proxy_keys[key]) {
+    db.proxy_keys[key].deviceId = null;
+    saveDb(db);
+    return res.json({ status: 'success' });
+  }
+  return res.status(404).json({ status: 'failed', reason: 'Proxy Key not found' });
+});
+
+app.post('/api/admin/proxy/toggle-key', checkAdminAuth, (req, res) => {
+  const { key } = req.body || {};
+  const db = getDb();
+  if (db.proxy_keys && db.proxy_keys[key]) {
+    db.proxy_keys[key].isActive = !db.proxy_keys[key].isActive;
+    saveDb(db);
+    return res.json({ status: 'success', isActive: db.proxy_keys[key].isActive });
+  }
+  return res.status(404).json({ status: 'failed', reason: 'Proxy Key not found' });
 });
 
 // ==========================================

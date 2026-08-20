@@ -742,8 +742,8 @@
     }
 
     async function deleteCkerKey(key) {
-      if (!confirm('Are you sure you want to delete CKER Key: ' + key + '?')) return;
-      await fetch('/api/admin/cker/delete-key', {
+      if (!confirm('Are you sure you want to delete Proxy Key: ' + key + '?')) return;
+      await fetch('/api/admin/proxy/delete-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
         body: JSON.stringify({ key })
@@ -752,17 +752,17 @@
     }
 
     async function resetCkerHwid(key) {
-      await fetch('/api/admin/cker/reset-hwid', {
+      await fetch('/api/admin/proxy/reset-hwid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
         body: JSON.stringify({ key })
       });
-      alert('Device reset! CKER Key can now be used on a new device.');
+      alert('Device reset! Proxy Key can now be used on a new device.');
       fetchDashboardData();
     }
 
     async function toggleCkerKey(key) {
-      await fetch('/api/admin/cker/toggle-key', {
+      await fetch('/api/admin/proxy/toggle-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
         body: JSON.stringify({ key })
@@ -771,12 +771,12 @@
     }
 
     function renderData(data) {
-      // Save and render keys
+      // Save and render ARENA MOD keys
       cachedKeys = data.keys || {};
       filterKeys();
 
-      // Save and render CKER keys
-      cachedCkerKeys = data.cker_keys || {};
+      // Save and render PRIME PROXY keys
+      cachedCkerKeys = data.proxy_keys || data.cker_keys || {};
       filterCkerKeys();
 
       // Render App Update & Security & Branding & Custom Config
