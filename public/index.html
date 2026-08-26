@@ -74,6 +74,9 @@
           <a class="nav-link text-warning" href="#" onclick="switchTab('ckerTab', this)"><i class="fa-solid fa-crosshairs text-warning"></i> CKER Key Generator</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link text-danger" href="#" onclick="switchTab('brmodsTab', this)"><i class="fa-solid fa-bolt text-danger"></i> BR MODS V2</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="#" onclick="switchTab('appUpdateTab', this)"><i class="fa-solid fa-sliders"></i> App Endpoints & Config</a>
         </li>
         <li class="nav-item">
@@ -260,6 +263,89 @@
             </div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- TAB 1.5: BR MODS V2 KEYS -->
+      <div id="brmodsTab" style="display: none;">
+        <div class="row g-4">
+          <!-- BR MODS Key Generator Form -->
+          <div class="col-lg-4">
+            <div class="card shadow" style="border: 1px solid #ef4444;">
+              <div class="card-header bg-dark text-danger" style="border-bottom: 1px solid #ef4444;"><i class="fa-solid fa-plus-circle text-danger"></i> Create BR MODS Key</div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <label class="form-label small">Days (दिन):</label>
+                    <input type="number" id="newBrDays" class="form-control" value="30" min="0">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">Hours (घंटे):</label>
+                    <input type="number" id="newBrHours" class="form-control" value="0" min="0">
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Key Prefix (उदा. BR, VIP):</label>
+                  <input type="text" id="newBrPrefix" class="form-control" placeholder="BR">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Note / Customer Name (नोट / ग्राहक):</label>
+                  <input type="text" id="newBrNote" class="form-control" placeholder="Optional (उदा. Customer A)">
+                </div>
+                <button onclick="createBrKey()" class="btn btn-danger w-100 fw-bold py-2"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate BR MODS Key</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- BR MODS Keys List Table -->
+          <div class="col-lg-8">
+            <div class="card shadow" style="border: 1px solid #ef4444;">
+              <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid #ef4444;">
+                <span class="text-danger"><i class="fa-solid fa-key"></i> BR MODS Keys (<span id="brKeyCount">0</span>) &mdash; <code>/mod/auth.php</code></span>
+                <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-rotate"></i> Refresh</button>
+              </div>
+
+              <!-- SEARCH & FILTER TOOLBAR -->
+              <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-50">
+                <div class="row g-2 align-items-center">
+                  <div class="col-md-7">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-dark border-secondary text-danger"><i class="fa-solid fa-magnifying-glass"></i></span>
+                      <input type="text" id="searchBrInput" class="form-control" placeholder="Search Key, Note, HWID..." oninput="filterBrKeys()">
+                      <button class="btn btn-outline-secondary" type="button" onclick="clearBrSearch()" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <select id="statusBrFilterSelect" class="form-select form-select-sm" onchange="filterBrKeys()">
+                      <option value="all">🔍 All Keys (सभी कीज़)</option>
+                      <option value="active">🟢 Active Keys (चालू)</option>
+                      <option value="expired">🔴 Expired Keys (एक्सपायर)</option>
+                      <option value="bound">📱 Bound (डिवाइस लॉक)</option>
+                      <option value="unbound">🔓 Not Bound (फ्री डिवाइस)</option>
+                      <option value="blocked">⛔ Blocked (ब्लॉक की गई)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-body p-0 table-responsive">
+                <table class="table table-dark table-hover mb-0 align-middle">
+                  <thead>
+                    <tr class="text-secondary small">
+                      <th>Key / Cliente</th>
+                      <th>Expiry</th>
+                      <th>Device (HWID)</th>
+                      <th>Status</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="brKeysTableBody">
+                    <tr><td colspan="5" class="text-center py-4 text-secondary">Loading BR MODS keys...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -472,6 +558,7 @@
 
     function switchTab(tabId, el) {
       document.getElementById('keysTab').style.display = tabId === 'keysTab' ? 'block' : 'none';
+      document.getElementById('brmodsTab').style.display = tabId === 'brmodsTab' ? 'block' : 'none';
       document.getElementById('ckerTab').style.display = tabId === 'ckerTab' ? 'block' : 'none';
       document.getElementById('appUpdateTab').style.display = tabId === 'appUpdateTab' ? 'block' : 'none';
       document.getElementById('profileTab').style.display = tabId === 'profileTab' ? 'block' : 'none';
@@ -785,10 +872,155 @@
       fetchDashboardData();
     }
 
+    let cachedBrKeys = {};
+
+    function filterBrKeys() {
+      const searchTerm = (document.getElementById('searchBrInput')?.value || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('statusBrFilterSelect')?.value || 'all';
+      const tbody = document.getElementById('brKeysTableBody');
+
+      const allKeyNames = Object.keys(cachedBrKeys);
+      const countEl = document.getElementById('brKeyCount');
+      if (countEl) countEl.innerText = allKeyNames.length;
+
+      if (!tbody) return;
+
+      if (allKeyNames.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-secondary">No BR MODS keys generated yet.</td></tr>';
+        return;
+      }
+
+      const filteredNames = allKeyNames.filter(k => {
+        const item = cachedBrKeys[k];
+        const isExpired = new Date() > new Date(item.expiresAt);
+        const note = (item.note || '').toLowerCase();
+        const deviceId = (item.deviceId || '').toLowerCase();
+        const keyName = k.toLowerCase();
+
+        if (searchTerm) {
+          const matchesSearch = keyName.includes(searchTerm) || note.includes(searchTerm) || deviceId.includes(searchTerm);
+          if (!matchesSearch) return false;
+        }
+
+        if (statusFilter === 'active') {
+          return item.isActive && !isExpired;
+        } else if (statusFilter === 'expired') {
+          return isExpired;
+        } else if (statusFilter === 'bound') {
+          return !!item.deviceId;
+        } else if (statusFilter === 'unbound') {
+          return !item.deviceId;
+        } else if (statusFilter === 'blocked') {
+          return !item.isActive;
+        }
+
+        return true;
+      });
+
+      if (filteredNames.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i> No BR MODS keys matching your filter/search. 
+          <button class="btn btn-link btn-sm text-danger p-0 ms-1" onclick="clearBrSearch()">Clear Filters</button>
+        </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filteredNames.map(k => {
+        const item = cachedBrKeys[k];
+        const isExpired = new Date() > new Date(item.expiresAt);
+        const expFormatted = new Date(item.expiresAt).toLocaleDateString() + ' ' + new Date(item.expiresAt).toLocaleTimeString();
+
+        return `<tr>
+          <td>
+            <div class="fw-bold text-danger">
+              <i class="fa-solid fa-key me-1"></i> ${k}
+            </div>
+            ${item.note ? '<small class="text-secondary">' + item.note + '</small>' : ''}
+          </td>
+          <td class="small ${isExpired ? 'text-danger' : 'text-success'}">
+            ${expFormatted}
+          </td>
+          <td>
+            ${item.deviceId ? '<span class="badge badge-bound" title="' + item.deviceId + '"><i class="fa-solid fa-mobile-screen"></i> Locked</span>' : '<span class="badge badge-unbound">Not Bound</span>'}
+          </td>
+          <td>
+            ${isExpired ? '<span class="badge badge-expired">Expired</span>' : (item.isActive ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-expired">Blocked</span>')}
+          </td>
+          <td class="text-end">
+            ${item.deviceId ? '<button onclick="resetBrHwid(\''+k+'\')" class="btn btn-sm btn-outline-warning me-1" title="Reset Device Binding"><i class="fa-solid fa-arrows-rotate"></i></button>' : ''}
+            <button onclick="toggleBrKey(\''+k+'\')" class="btn btn-sm btn-outline-secondary me-1" title="Block/Unblock"><i class="fa-solid fa-power-off"></i></button>
+            <button onclick="deleteBrKey(\''+k+'\')" class="btn btn-sm btn-outline-danger" title="Delete Key"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function clearBrSearch() {
+      const sInput = document.getElementById('searchBrInput');
+      const sFilter = document.getElementById('statusBrFilterSelect');
+      if (sInput) sInput.value = '';
+      if (sFilter) sFilter.value = 'all';
+      filterBrKeys();
+    }
+
+    async function createBrKey() {
+      const days = document.getElementById('newBrDays').value;
+      const hours = document.getElementById('newBrHours').value;
+      const prefix = document.getElementById('newBrPrefix').value;
+      const note = document.getElementById('newBrNote').value;
+
+      const res = await fetch('/api/admin/brmods/create-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ durationDays: days, durationHours: hours, prefix, note })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        alert('नई BR MODS Key बन गई है:\n' + data.key);
+        document.getElementById('newBrNote').value = '';
+        fetchDashboardData();
+      } else {
+        alert('Error: ' + data.reason);
+      }
+    }
+
+    async function deleteBrKey(key) {
+      if (!confirm('Are you sure you want to delete BR MODS Key: ' + key + '?')) return;
+      await fetch('/api/admin/brmods/delete-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      fetchDashboardData();
+    }
+
+    async function resetBrHwid(key) {
+      await fetch('/api/admin/brmods/reset-hwid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      alert('Device reset! BR MODS Key can now be used on a new device.');
+      fetchDashboardData();
+    }
+
+    async function toggleBrKey(key) {
+      await fetch('/api/admin/brmods/toggle-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+        body: JSON.stringify({ key })
+      });
+      fetchDashboardData();
+    }
+
     function renderData(data) {
       // Save and render keys
       cachedKeys = data.keys || {};
       filterKeys();
+
+      // Save and render BR MODS keys
+      cachedBrKeys = data.brmods_keys || {};
+      filterBrKeys();
 
       // Save and render CKER keys
       cachedCkerKeys = data.cker_keys || {};

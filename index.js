@@ -24,6 +24,7 @@ function getDb() {
       const data = JSON.parse(raw);
       if (!data.keys) data.keys = {};
       if (!data.cker_keys) data.cker_keys = {};
+      if (!data.brmods_keys) data.brmods_keys = {};
       if (!data.app_update) {
         data.app_update = {
           latest_version: '1.0.0',
@@ -56,7 +57,7 @@ function getDb() {
   } catch (err) {
     console.error('Error reading database:', err);
   }
-  return { keys: {}, cker_keys: {}, app_update: {}, security: {}, web_info: {}, custom_config: {} };
+  return { keys: {}, cker_keys: {}, brmods_keys: {}, app_update: {}, security: {}, web_info: {}, custom_config: {} };
 }
 
 function saveDb(data) {
@@ -626,6 +627,192 @@ app.post('/api/admin/cker/toggle-key', checkAdminAuth, (req, res) => {
     return res.json({ status: 'success', isActive: db.cker_keys[key].isActive });
   }
   return res.status(404).json({ status: 'failed', reason: 'CKER Key not found' });
+});
+
+// ==========================================
+// 6.5. BR MODS V2 ENDPOINTS (/mod/auth.php & /mod/auth)
+// ==========================================
+
+const handleBrmodsAuth = (req, res) => {
+  const key = (
+    req.body?.user_key || req.body?.key || req.body?.user || req.body?.username || req.body?.license ||
+    req.query?.user_key || req.query?.key || req.query?.user || req.query?.username || req.query?.license || ''
+  ).toString().trim();
+
+  const hwid = (
+    req.body?.serial || req.body?.device_id || req.body?.hwid || req.body?.uuid ||
+    req.query?.serial || req.query?.device_id || req.query?.hwid || ''
+  ).toString().trim();
+
+  if (!key) {
+    return res.status(200).json({
+      status: false,
+      Cliente: "INVALID",
+      Dias: "0",
+      reason: "Missing Key or Username"
+    });
+  }
+
+  const db = getDb();
+  let keyData = null;
+  let accountKey = '';
+  let isBrDb = false;
+
+  // 1. Check in brmods_keys
+  if (db.brmods_keys) {
+    if (db.brmods_keys[key]) {
+      keyData = db.brmods_keys[key];
+      accountKey = key;
+      isBrDb = true;
+    } else {
+      for (const [k, v] of Object.entries(db.brmods_keys)) {
+        if (k.toLowerCase() === key.toLowerCase() || (v.username && v.username.toLowerCase() === key.toLowerCase())) {
+          keyData = v;
+          accountKey = k;
+          isBrDb = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. Fallback: Check in standard keys or cker_keys
+  if (!keyData) {
+    if (db.keys && db.keys[key]) {
+      keyData = db.keys[key];
+      accountKey = key;
+      isBrDb = false;
+    } else if (db.cker_keys && db.cker_keys[key]) {
+      keyData = db.cker_keys[key];
+      accountKey = key;
+      isBrDb = false;
+    }
+  }
+
+  if (!keyData || !keyData.isActive) {
+    return res.status(200).json({
+      status: false,
+      Cliente: "INVALID / BLOCKED",
+      Dias: "0",
+      reason: "Invalid or Blocked Key"
+    });
+  }
+
+  const now = new Date();
+  const expDate = new Date(keyData.expiresAt);
+  if (now > expDate) {
+    return res.status(200).json({
+      status: false,
+      Cliente: accountKey,
+      Dias: "EXPIRED",
+      reason: "License key has expired"
+    });
+  }
+
+  // HWID locking
+  if (hwid) {
+    if (!keyData.deviceId) {
+      keyData.deviceId = hwid;
+      if (isBrDb) {
+        db.brmods_keys[accountKey] = keyData;
+      } else {
+        db.keys[accountKey] = keyData;
+      }
+      saveDb(db);
+    } else if (keyData.deviceId !== hwid) {
+      return res.status(200).json({
+        status: false,
+        Cliente: accountKey,
+        Dias: "DEVICE MISMATCH",
+        reason: "HWID Mismatch: Key is locked to another device"
+      });
+    }
+  }
+
+  // Calculate days remaining
+  const diffMs = expDate.getTime() - now.getTime();
+  const daysLeft = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+  return res.status(200).json({
+    status: true,
+    Cliente: accountKey,
+    Dias: daysLeft.toString(),
+    reason: "Login Success"
+  });
+};
+
+app.post('/mod/auth.php', handleBrmodsAuth);
+app.get('/mod/auth.php', handleBrmodsAuth);
+app.post('/mod/auth', handleBrmodsAuth);
+app.get('/mod/auth', handleBrmodsAuth);
+app.post('/auth.php', handleBrmodsAuth);
+app.get('/auth.php', handleBrmodsAuth);
+
+// BR MODS Admin APIs
+app.post('/api/admin/brmods/create-key', checkAdminAuth, (req, res) => {
+  const { prefix, durationDays, durationHours, note } = req.body || {};
+  const db = getDb();
+  if (!db.brmods_keys) db.brmods_keys = {};
+
+  const days = parseInt(durationDays) || 0;
+  const hours = parseInt(durationHours) || 0;
+  const totalMs = (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000);
+
+  if (totalMs <= 0) {
+    return res.status(400).json({ status: 'failed', reason: 'Duration must be greater than 0' });
+  }
+
+  const randomStr = crypto.randomBytes(4).toString('hex').toUpperCase();
+  const keyName = (prefix && prefix.trim()) 
+    ? `${prefix.trim().toUpperCase()}-${randomStr}` 
+    : `BR-${randomStr}`;
+
+  const expiresAt = new Date(Date.now() + totalMs).toISOString();
+
+  db.brmods_keys[keyName] = {
+    deviceId: null,
+    expiresAt: expiresAt,
+    isActive: true,
+    durationDays: days + (hours / 24),
+    createdAt: new Date().toISOString(),
+    note: note || ''
+  };
+
+  saveDb(db);
+  return res.json({ status: 'success', key: keyName, data: db.brmods_keys[keyName] });
+});
+
+app.post('/api/admin/brmods/delete-key', checkAdminAuth, (req, res) => {
+  const { key } = req.body || {};
+  const db = getDb();
+  if (db.brmods_keys && db.brmods_keys[key]) {
+    delete db.brmods_keys[key];
+    saveDb(db);
+    return res.json({ status: 'success' });
+  }
+  return res.status(404).json({ status: 'failed', reason: 'BR MODS Key not found' });
+});
+
+app.post('/api/admin/brmods/reset-hwid', checkAdminAuth, (req, res) => {
+  const { key } = req.body || {};
+  const db = getDb();
+  if (db.brmods_keys && db.brmods_keys[key]) {
+    db.brmods_keys[key].deviceId = null;
+    saveDb(db);
+    return res.json({ status: 'success' });
+  }
+  return res.status(404).json({ status: 'failed', reason: 'BR MODS Key not found' });
+});
+
+app.post('/api/admin/brmods/toggle-key', checkAdminAuth, (req, res) => {
+  const { key } = req.body || {};
+  const db = getDb();
+  if (db.brmods_keys && db.brmods_keys[key]) {
+    db.brmods_keys[key].isActive = !db.brmods_keys[key].isActive;
+    saveDb(db);
+    return res.json({ status: 'success', isActive: db.brmods_keys[key].isActive });
+  }
+  return res.status(404).json({ status: 'failed', reason: 'BR MODS Key not found' });
 });
 
 // ==========================================

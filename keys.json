@@ -1,12 +1,22 @@
 {
   "keys": {
     "VIP-KEY-001": {
-      "deviceId": null,
+      "deviceId": "DEVICE-TEST-123",
       "expiresAt": "2026-12-31T23:59:59.000Z",
       "isActive": true,
       "durationDays": 30,
       "createdAt": "2026-08-18T00:00:00.000Z",
       "note": "Default VIP Key"
+    }
+  },
+  "brmods_keys": {
+    "BRVIP-2809FEC7": {
+      "deviceId": "HWID-9999",
+      "expiresAt": "2026-09-25T20:29:06.843Z",
+      "isActive": true,
+      "durationDays": 30,
+      "createdAt": "2026-08-26T20:29:06.843Z",
+      "note": "Test BR Key"
     }
   },
   "app_update": {
@@ -30,5 +40,6 @@
     "server_message": "Server is running smoothly",
     "maintenance": false
   },
-  "admin_password": "khan9131"
+  "admin_password": "khan9131",
+  "cker_keys": {}
 }
