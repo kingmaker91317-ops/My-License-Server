@@ -639,6 +639,11 @@ const handleBrmodsAuth = (req, res) => {
     req.query?.user_key || req.query?.key || req.query?.user || req.query?.username || req.query?.license || ''
   ).toString().trim();
 
+  const password = (
+    req.body?.password || req.body?.pass || req.body?.user_password ||
+    req.query?.password || req.query?.pass || req.query?.user_password || ''
+  ).toString().trim();
+
   const hwid = (
     req.body?.serial || req.body?.device_id || req.body?.hwid || req.body?.uuid ||
     req.query?.serial || req.query?.device_id || req.query?.hwid || ''
@@ -698,6 +703,18 @@ const handleBrmodsAuth = (req, res) => {
     });
   }
 
+  // Password verification if account has password set
+  if (isBrDb && keyData.password) {
+    if (password && keyData.password !== password) {
+      return res.status(200).json({
+        status: false,
+        Cliente: "INVALID PASSWORD",
+        Dias: "0",
+        reason: "Incorrect Password"
+      });
+    }
+  }
+
   const now = new Date();
   const expDate = new Date(keyData.expiresAt);
   if (now > expDate) {
@@ -750,7 +767,7 @@ app.get('/auth.php', handleBrmodsAuth);
 
 // BR MODS Admin APIs
 app.post('/api/admin/brmods/create-key', checkAdminAuth, (req, res) => {
-  const { prefix, durationDays, durationHours, note } = req.body || {};
+  const { username, password, prefix, durationDays, durationHours, note } = req.body || {};
   const db = getDb();
   if (!db.brmods_keys) db.brmods_keys = {};
 
@@ -762,14 +779,16 @@ app.post('/api/admin/brmods/create-key', checkAdminAuth, (req, res) => {
     return res.status(400).json({ status: 'failed', reason: 'Duration must be greater than 0' });
   }
 
-  const randomStr = crypto.randomBytes(4).toString('hex').toUpperCase();
-  const keyName = (prefix && prefix.trim()) 
-    ? `${prefix.trim().toUpperCase()}-${randomStr}` 
-    : `BR-${randomStr}`;
+  const randomStr = crypto.randomBytes(3).toString('hex').toUpperCase();
+  const keyName = (username && username.trim()) 
+    ? username.trim() 
+    : ((prefix && prefix.trim()) ? `${prefix.trim().toUpperCase()}-${randomStr}` : `BR-${randomStr}`);
 
   const expiresAt = new Date(Date.now() + totalMs).toISOString();
 
   db.brmods_keys[keyName] = {
+    username: keyName,
+    password: (password && password.trim()) ? password.trim() : null,
     deviceId: null,
     expiresAt: expiresAt,
     isActive: true,

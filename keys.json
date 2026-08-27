@@ -17,6 +17,16 @@
       "durationDays": 30,
       "createdAt": "2026-08-26T20:29:06.843Z",
       "note": "Test BR Key"
+    },
+    "testuser1": {
+      "username": "testuser1",
+      "password": "mypassword123",
+      "deviceId": "DEVICE-100",
+      "expiresAt": "2026-09-26T12:09:00.579Z",
+      "isActive": true,
+      "durationDays": 30,
+      "createdAt": "2026-08-27T12:09:00.580Z",
+      "note": "User Pass Test"
     }
   },
   "app_update": {

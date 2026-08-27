@@ -272,7 +272,7 @@
           <!-- BR MODS Key Generator Form -->
           <div class="col-lg-4">
             <div class="card shadow" style="border: 1px solid #ef4444;">
-              <div class="card-header bg-dark text-danger" style="border-bottom: 1px solid #ef4444;"><i class="fa-solid fa-plus-circle text-danger"></i> Create BR MODS Key</div>
+              <div class="card-header bg-dark text-danger" style="border-bottom: 1px solid #ef4444;"><i class="fa-solid fa-plus-circle text-danger"></i> Create BR MODS Account / Key</div>
               <div class="card-body">
                 <div class="row mb-3">
                   <div class="col-6">
@@ -285,14 +285,22 @@
                   </div>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label small">Key Prefix (उदा. BR, VIP):</label>
+                  <label class="form-label small">Username (यूज़रनेम - ऐच्छिक):</label>
+                  <input type="text" id="newBrUser" class="form-control" placeholder="Optional (उदा. User123)">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Password (पासवर्ड - ऐच्छिक):</label>
+                  <input type="text" id="newBrPass" class="form-control" placeholder="Optional (उदा. Pass123)">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Key Prefix (यदि Username ख़ाली हो):</label>
                   <input type="text" id="newBrPrefix" class="form-control" placeholder="BR">
                 </div>
                 <div class="mb-3">
                   <label class="form-label small">Note / Customer Name (नोट / ग्राहक):</label>
                   <input type="text" id="newBrNote" class="form-control" placeholder="Optional (उदा. Customer A)">
                 </div>
-                <button onclick="createBrKey()" class="btn btn-danger w-100 fw-bold py-2"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate BR MODS Key</button>
+                <button onclick="createBrKey()" class="btn btn-danger w-100 fw-bold py-2"><i class="fa-solid fa-user-plus"></i> Generate Account / Key</button>
               </div>
             </div>
           </div>
@@ -301,7 +309,7 @@
           <div class="col-lg-8">
             <div class="card shadow" style="border: 1px solid #ef4444;">
               <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom: 1px solid #ef4444;">
-                <span class="text-danger"><i class="fa-solid fa-key"></i> BR MODS Keys (<span id="brKeyCount">0</span>) &mdash; <code>/mod/auth.php</code></span>
+                <span class="text-danger"><i class="fa-solid fa-users"></i> BR MODS Accounts & Keys (<span id="brKeyCount">0</span>) &mdash; <code>/mod/auth.php</code></span>
                 <button onclick="fetchDashboardData()" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-rotate"></i> Refresh</button>
               </div>
 
@@ -311,13 +319,13 @@
                   <div class="col-md-7">
                     <div class="input-group input-group-sm">
                       <span class="input-group-text bg-dark border-secondary text-danger"><i class="fa-solid fa-magnifying-glass"></i></span>
-                      <input type="text" id="searchBrInput" class="form-control" placeholder="Search Key, Note, HWID..." oninput="filterBrKeys()">
+                      <input type="text" id="searchBrInput" class="form-control" placeholder="Search Username, Password, Note, HWID..." oninput="filterBrKeys()">
                       <button class="btn btn-outline-secondary" type="button" onclick="clearBrSearch()" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                   </div>
                   <div class="col-md-5">
                     <select id="statusBrFilterSelect" class="form-select form-select-sm" onchange="filterBrKeys()">
-                      <option value="all">🔍 All Keys (सभी कीज़)</option>
+                      <option value="all">🔍 All Accounts (सभी अकाउंट्स)</option>
                       <option value="active">🟢 Active Keys (चालू)</option>
                       <option value="expired">🔴 Expired Keys (एक्सपायर)</option>
                       <option value="bound">📱 Bound (डिवाइस लॉक)</option>
@@ -332,7 +340,8 @@
                 <table class="table table-dark table-hover mb-0 align-middle">
                   <thead>
                     <tr class="text-secondary small">
-                      <th>Key / Cliente</th>
+                      <th>Username / Key</th>
+                      <th>Password</th>
                       <th>Expiry</th>
                       <th>Device (HWID)</th>
                       <th>Status</th>
@@ -340,7 +349,7 @@
                     </tr>
                   </thead>
                   <tbody id="brKeysTableBody">
-                    <tr><td colspan="5" class="text-center py-4 text-secondary">Loading BR MODS keys...</td></tr>
+                    <tr><td colspan="6" class="text-center py-4 text-secondary">Loading BR MODS accounts...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -886,7 +895,7 @@
       if (!tbody) return;
 
       if (allKeyNames.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-secondary">No BR MODS keys generated yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-secondary">No BR MODS accounts generated yet.</td></tr>';
         return;
       }
 
@@ -894,11 +903,12 @@
         const item = cachedBrKeys[k];
         const isExpired = new Date() > new Date(item.expiresAt);
         const note = (item.note || '').toLowerCase();
+        const pass = (item.password || '').toLowerCase();
         const deviceId = (item.deviceId || '').toLowerCase();
         const keyName = k.toLowerCase();
 
         if (searchTerm) {
-          const matchesSearch = keyName.includes(searchTerm) || note.includes(searchTerm) || deviceId.includes(searchTerm);
+          const matchesSearch = keyName.includes(searchTerm) || pass.includes(searchTerm) || note.includes(searchTerm) || deviceId.includes(searchTerm);
           if (!matchesSearch) return false;
         }
 
@@ -918,8 +928,8 @@
       });
 
       if (filteredNames.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-warning">
-          <i class="fa-solid fa-triangle-exclamation"></i> No BR MODS keys matching your filter/search. 
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i> No BR MODS accounts matching your filter/search. 
           <button class="btn btn-link btn-sm text-danger p-0 ms-1" onclick="clearBrSearch()">Clear Filters</button>
         </td></tr>`;
         return;
@@ -933,9 +943,12 @@
         return `<tr>
           <td>
             <div class="fw-bold text-danger">
-              <i class="fa-solid fa-key me-1"></i> ${k}
+              <i class="fa-solid fa-user me-1"></i> ${k}
             </div>
             ${item.note ? '<small class="text-secondary">' + item.note + '</small>' : ''}
+          </td>
+          <td>
+            ${item.password ? '<code class="text-warning fw-bold"><i class="fa-solid fa-lock me-1"></i>' + item.password + '</code>' : '<span class="badge bg-secondary">Key Mode</span>'}
           </td>
           <td class="small ${isExpired ? 'text-danger' : 'text-success'}">
             ${expFormatted}
@@ -949,7 +962,7 @@
           <td class="text-end">
             ${item.deviceId ? '<button onclick="resetBrHwid(\''+k+'\')" class="btn btn-sm btn-outline-warning me-1" title="Reset Device Binding"><i class="fa-solid fa-arrows-rotate"></i></button>' : ''}
             <button onclick="toggleBrKey(\''+k+'\')" class="btn btn-sm btn-outline-secondary me-1" title="Block/Unblock"><i class="fa-solid fa-power-off"></i></button>
-            <button onclick="deleteBrKey(\''+k+'\')" class="btn btn-sm btn-outline-danger" title="Delete Key"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="deleteBrKey(\''+k+'\')" class="btn btn-sm btn-outline-danger" title="Delete Key/Account"><i class="fa-solid fa-trash"></i></button>
           </td>
         </tr>`;
       }).join('');
@@ -966,17 +979,23 @@
     async function createBrKey() {
       const days = document.getElementById('newBrDays').value;
       const hours = document.getElementById('newBrHours').value;
+      const username = document.getElementById('newBrUser').value;
+      const password = document.getElementById('newBrPass').value;
       const prefix = document.getElementById('newBrPrefix').value;
       const note = document.getElementById('newBrNote').value;
 
       const res = await fetch('/api/admin/brmods/create-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-        body: JSON.stringify({ durationDays: days, durationHours: hours, prefix, note })
+        body: JSON.stringify({ durationDays: days, durationHours: hours, username, password, prefix, note })
       });
       const data = await res.json();
       if (data.status === 'success') {
-        alert('नई BR MODS Key बन गई है:\n' + data.key);
+        const u = data.data.username || data.key;
+        const p = data.data.password ? '\nPassword: ' + data.data.password : '';
+        alert('नया BR MODS अकाउंट/की बन गई है:\n\nUsername/Key: ' + u + p);
+        document.getElementById('newBrUser').value = '';
+        document.getElementById('newBrPass').value = '';
         document.getElementById('newBrNote').value = '';
         fetchDashboardData();
       } else {
