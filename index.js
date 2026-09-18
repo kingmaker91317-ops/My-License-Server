@@ -97,23 +97,41 @@ app.get('/connect', (req, res) => {
 });
 
 // POST /connect -> जब ऐप लॉगिन/लाइसेंस वेरिफाई करे
-app.post('/connect', (req, res) => {
-  // Support both standard names and Android app parameters (user_key, serial)
-  const license_key = (req.body.user_key || req.body.license_key || req.body.key || req.query.user_key || req.query.license_key || '').toString().trim();
-  const device_id = (req.body.serial || req.body.device_id || req.body.hwid || req.query.serial || req.query.device_id || '').toString().trim();
+const handleConnect = (req, res) => {
+  // Support both standard names and Android app parameters (user_key, serial, username)
+  const license_key = (req.body.user_key || req.body.license_key || req.body.key || req.body.username || req.query.user_key || req.query.license_key || req.query.key || '').toString().trim();
+  const device_id = (req.body.serial || req.body.device_id || req.body.hwid || req.query.serial || req.query.device_id || req.body.username || 'DEFAULT_DEVICE').toString().trim();
 
-  if (!license_key || !device_id) {
+  if (!license_key) {
     return res.status(200).json({
       status: false,
       crash: false,
-      reason: 'Missing license key or device serial'
+      reason: 'Missing license key'
     });
   }
 
   const db = getDb();
-  const keyData = db.keys[license_key];
+  let keyData = db.keys ? db.keys[license_key] : null;
 
-  if (!keyData || !keyData.isActive) {
+  if (!keyData && db.keys) {
+    for (const [k, v] of Object.entries(db.keys)) {
+      if (k.toLowerCase() === license_key.toLowerCase()) {
+        keyData = v;
+        break;
+      }
+    }
+  }
+
+  if (!keyData && db.brmods_keys) {
+    for (const [k, v] of Object.entries(db.brmods_keys)) {
+      if (k.toLowerCase() === license_key.toLowerCase() || (v.username && v.username.toLowerCase() === license_key.toLowerCase())) {
+        keyData = v;
+        break;
+      }
+    }
+  }
+
+  if (!keyData || keyData.isActive === false) {
     return res.status(200).json({
       status: false,
       crash: false,
@@ -122,7 +140,7 @@ app.post('/connect', (req, res) => {
   }
 
   const now = new Date();
-  const expDate = new Date(keyData.expiresAt);
+  const expDate = keyData.expiresAt ? new Date(keyData.expiresAt) : new Date(now.getTime() + 365 * 24 * 3600 * 1000);
   if (now > expDate) {
     return res.status(200).json({
       status: false,
@@ -133,14 +151,10 @@ app.post('/connect', (req, res) => {
 
   if (!keyData.deviceId) {
     keyData.deviceId = device_id;
-    db.keys[license_key] = keyData;
-    saveDb(db);
-  } else if (keyData.deviceId !== device_id) {
-    return res.status(200).json({
-      status: false,
-      crash: false,
-      reason: 'Device mismatch: Key is locked to another device'
-    });
+    if (db.keys && db.keys[license_key]) {
+      db.keys[license_key] = keyData;
+      saveDb(db);
+    }
   }
 
   const token = jwt.sign(
@@ -161,14 +175,17 @@ app.post('/connect', (req, res) => {
     data: {
       user_key: license_key,
       expired_date: expStr,
-      seller_name: "ARENA MOD",
-      registrator: "ARENA MOD"
+      seller_name: "AngryMod",
+      registrator: "Admin"
     },
     reason: 'Login Success',
+    message: 'Login Success',
     exp: expStr,
     token: token
   });
-});
+};
+
+app.post('/connect', handleConnect);
 
 // ==========================================
 // 2. ENDPOINT: APP UPDATE (/update.php)
@@ -217,6 +234,11 @@ app.get('/apkhash', handleApkHash);
 // 4. ENDPOINT: CUSTOM CONFIG / STATUS (/hdshrs.php)
 // ==========================================
 const handleHdshrs = (req, res) => {
+  // If POST request contains license parameters, handle as login
+  if (req.method === 'POST' && (req.body.user_key || req.body.key || req.body.license_key || req.body.username || req.query.user_key || req.query.key)) {
+    return handleConnect(req, res);
+  }
+
   const db = getDb();
   const config = db.custom_config || {
     maintenance: false,

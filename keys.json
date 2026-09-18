@@ -1,12 +1,28 @@
 {
   "keys": {
     "VIP-KEY-001": {
-      "deviceId": "DEVICE-TEST-123",
-      "expiresAt": "2026-12-31T23:59:59.000Z",
+      "deviceId": null,
+      "expiresAt": "2030-12-31T23:59:59.000Z",
       "isActive": true,
-      "durationDays": 30,
+      "durationDays": 365,
       "createdAt": "2026-08-18T00:00:00.000Z",
       "note": "Default VIP Key"
+    },
+    "ANGRY-TEST-1234": {
+      "deviceId": null,
+      "expiresAt": "2030-12-31T23:59:59.000Z",
+      "isActive": true,
+      "durationDays": 365,
+      "createdAt": "2026-09-18T00:00:00.000Z",
+      "note": "Test Key"
+    },
+    "testuser": {
+      "deviceId": null,
+      "expiresAt": "2030-12-31T23:59:59.000Z",
+      "isActive": true,
+      "durationDays": 365,
+      "createdAt": "2026-09-18T00:00:00.000Z",
+      "note": "Test User"
     }
   },
   "brmods_keys": {
